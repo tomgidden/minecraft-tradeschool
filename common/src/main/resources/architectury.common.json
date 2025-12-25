@@ -1,0 +1,6 @@
+{
+  "accessWidener": "tradeschool.accesswidener",
+  "mixins": [
+    "tradeschool.mixins.json"
+  ]
+}

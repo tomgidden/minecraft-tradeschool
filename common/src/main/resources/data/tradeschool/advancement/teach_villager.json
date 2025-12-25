@@ -1,0 +1,23 @@
+{
+  "parent": "tradeschool:root",
+  "display": {
+    "icon": {
+      "id": "minecraft:enchanted_book"
+    },
+    "title": {
+      "translate": "advancements.tradeschool.teach_villager.title"
+    },
+    "description": {
+      "translate": "advancements.tradeschool.teach_villager.description"
+    },
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "taught_villager": {
+      "trigger": "minecraft:impossible"
+    }
+  }
+}

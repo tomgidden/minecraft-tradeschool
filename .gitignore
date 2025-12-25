@@ -1,0 +1,42 @@
+# Gradle files
+.gradle/
+build/
+out/
+gradle-app.setting
+!gradle-wrapper.jar
+.gradletasknamecache
+
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
+
+# IntelliJ IDEA
+.idea/
+*.jml
+*.ipr
+*.iws
+*.iml
+test-output-path/
+
+# VS Code
+.vscode/
+
+# MacOS
+.DS_Store
+
+# Java
+*.class
+*.log
+*.ctxt
+*.jar
+*.zip
+
+# Minecraft / Modding
+run/
+run-*/
+.architectury-transformer/
+
+# Exceptions (keep these)
+!gradle/wrapper/gradle-wrapper.jar

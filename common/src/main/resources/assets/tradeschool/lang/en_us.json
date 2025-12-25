@@ -1,0 +1,9 @@
+{
+  "enchantment.tradeschool.curse_of_copyright": "Curse of Copyright",
+  "enchantment.tradeschool.curse_of_copyright.desc": "Prevents villagers from learning this enchantment",
+  "tradeschool.teaching.curse_rejected": "The villager refuses to study copyrighted material!",
+  "advancements.tradeschool.root.title": "Trade School",
+  "advancements.tradeschool.root.description": "Teach villagers new knowledge",
+  "advancements.tradeschool.teach_villager.title": "Knowledge is Power",
+  "advancements.tradeschool.teach_villager.description": "Teach a villager by dropping an enchanted item or book near them"
+}

@@ -1,0 +1,61 @@
+architectury {
+    platformSetupLoomIde()
+    fabric()
+}
+
+loom {
+    accessWidenerPath = project(":common").loom.accessWidenerPath
+}
+
+configurations {
+    common
+    shadowCommon
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentFabric.extendsFrom common
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_version}"
+
+    // Architectury API for Fabric
+    modApi("dev.architectury:architectury-fabric:${rootProject.architectury_version}") {
+        exclude group: "net.fabricmc.fabric-api"
+    }
+
+    common(project(path: ":common", configuration: "namedElements")) { transitive false }
+    shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
+}
+
+processResources {
+    inputs.property "version", project.version
+
+    filesMatching("fabric.mod.json") {
+        expand "version": project.version,
+               "mod_id": project.mod_id,
+               "mod_name": project.mod_name,
+               "mod_group": project.mod_group,
+               "minecraft_version": project.minecraft_version,
+               "loader_version": project.loader_version,
+               "architectury_version": project.architectury_version
+    }
+}
+
+jar {
+    from(project(":common").sourceSets.main.output)
+    archiveClassifier.set("dev")
+}
+
+remapJar {
+    injectAccessWidener = true
+    input.set(jar.archiveFile)
+    dependsOn jar
+    archiveClassifier.set(null)
+}
+
+sourcesJar {
+    def commonSources = project(":common").sourcesJar
+    dependsOn commonSources
+    from commonSources.archiveFile.map { zipTree(it) }
+}
