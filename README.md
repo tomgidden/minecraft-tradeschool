@@ -86,5 +86,5 @@ It'd make Archaeology worth doing, and make Villagers _marginally_ less annoying
 
 ### Implementation
 
-I've implemented a basic mod to demonstrate this idea, called "Trade School" / "tradeschool". It's just a proof-of-concept at this stage, as I've little experience writing Minecraft mods.
+I've implemented a basic mod to demonstrate this idea, called "Trade School" / "tradeschool". It's just a proof-of-concept for Minecraft (Java) 1.21.11 at this stage, as I've little experience writing Minecraft mods.
 
