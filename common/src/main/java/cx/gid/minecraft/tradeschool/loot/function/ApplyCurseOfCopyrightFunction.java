@@ -14,7 +14,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.storage.loot.LootContext;
 import net.minecraft.world.level.storage.loot.functions.LootItemConditionalFunction;
-import net.minecraft.world.level.storage.loot.functions.LootItemFunctionType;
+import com.mojang.serialization.MapCodec;
 import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 import java.util.List;
@@ -38,7 +38,7 @@ public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
     }
 
     @Override
-    public LootItemFunctionType<? extends LootItemConditionalFunction> getType() {
+    public MapCodec<? extends LootItemConditionalFunction> codec() {
         return ModLootFunctions.APPLY_CURSE_OF_COPYRIGHT;
     }
 
@@ -69,9 +69,14 @@ public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
                 return stack; // No curse applied
             }
 
-            // Get curse enchantment holder
+            // Get curse enchantment holder — may be absent if datapacks not fully loaded (e.g. game tests)
             var enchantmentRegistry = context.getLevel().registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
-            Holder<Enchantment> curseHolder = enchantmentRegistry.getOrThrow(ModEnchantments.CURSE_OF_COPYRIGHT);
+            var curseHolderOpt = enchantmentRegistry.get(ModEnchantments.CURSE_OF_COPYRIGHT);
+            if (curseHolderOpt.isEmpty()) {
+                Constants.LOGGER.debug("Curse of Copyright enchantment not found in registry, skipping");
+                return stack;
+            }
+            Holder<Enchantment> curseHolder = curseHolderOpt.get();
 
             // Add curse to existing enchantments
             if (isBook) {

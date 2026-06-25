@@ -29,6 +29,11 @@ public class LootTableEventHandler {
                 manager.initializeEarly();
             }
 
+            // Bail out if loot distribution is globally disabled (e.g. for baseline testing)
+            if (!manager.getConfig().global.enabled) {
+                return;
+            }
+
             // Only modify built-in (vanilla) loot tables
             if (!source.isBuiltin()) {
                 return;
@@ -57,7 +62,7 @@ public class LootTableEventHandler {
                     Constants.LOGGER.debug("Applied curse function to existing pools in {} (tier: {})", lootTableId, tier);
                 }
 
-                // Now add our custom enchanted books
+                // Now add our custom enchanted books (gear injection handled in common)
                 manager.modifyLootTable(lootTableId, tableBuilder, registries);
             } catch (Exception e) {
                 Constants.LOGGER.error("Failed to modify loot table {}", lootTableId, e);

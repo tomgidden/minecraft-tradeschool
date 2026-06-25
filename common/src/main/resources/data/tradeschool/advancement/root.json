@@ -1,14 +1,11 @@
 {
+  "_comment": "Hardcoded English for server-side-only proof-of-concept only. title/description should be {\"translate\": \"advancements.tradeschool.root.title\"} etc., but that would require the mod client-side for i18n.",
   "display": {
     "icon": {
       "id": "minecraft:lectern"
     },
-    "title": {
-      "translate": "advancements.tradeschool.root.title"
-    },
-    "description": {
-      "translate": "advancements.tradeschool.root.description"
-    },
+    "title": {"text": "Trade School"},
+    "description": {"text": "Teach villagers new knowledge"},
     "frame": "task",
     "show_toast": false,
     "announce_to_chat": false,

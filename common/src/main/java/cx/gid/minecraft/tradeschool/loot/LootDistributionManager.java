@@ -1,19 +1,25 @@
 package cx.gid.minecraft.tradeschool.loot;
 
 import cx.gid.minecraft.tradeschool.Constants;
-import cx.gid.minecraft.tradeschool.loot.builder.EnchantedBookBuilder;
 import cx.gid.minecraft.tradeschool.loot.category.EnchantmentCategory;
 import cx.gid.minecraft.tradeschool.loot.config.*;
 import cx.gid.minecraft.tradeschool.loot.function.ApplyCurseOfCopyrightFunction;
 import cx.gid.minecraft.tradeschool.loot.tier.StructureTier;
+import net.minecraft.core.Holder;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
 import net.minecraft.world.level.storage.loot.entries.LootItem;
+import net.minecraft.world.level.storage.loot.entries.NestedLootTable;
 import net.minecraft.world.level.storage.loot.functions.SetComponentsFunction;
+import net.minecraft.world.level.storage.loot.providers.number.BinomialDistributionGenerator;
 import net.minecraft.world.level.storage.loot.providers.number.ConstantValue;
 
 import java.util.ArrayList;
@@ -118,14 +124,23 @@ public class LootDistributionManager {
     /**
      * Modifies a loot table by injecting enchanted books based on configuration.
      * Called by the Fabric loot table event handler.
-     *
-     * @param lootTableId The ID of the loot table being modified
-     * @param tableBuilder The loot table builder to modify
-     * @param registries The registry access for enchantment lookups
      */
     public void modifyLootTable(
         String lootTableId,
         LootTable.Builder tableBuilder,
+        HolderLookup.Provider registries
+    ) {
+        injectEnchantedBooks(lootTableId, tableBuilder, registries);
+    }
+
+    /**
+     * Injects an enchanted book pool via the provided consumer.
+     * Used by NeoForge where a LootTable.Builder is not available.
+     * The consumer receives a configured LootPool.Builder to add to the loot table.
+     */
+    public void modifyLootTableWithConsumer(
+        String lootTableId,
+        java.util.function.Consumer<LootPool.Builder> poolConsumer,
         HolderLookup.Provider registries
     ) {
         if (!initialized) {
@@ -133,34 +148,24 @@ public class LootDistributionManager {
             return;
         }
 
-        Constants.LOGGER.debug("Checking loot table: {}", lootTableId);
-
-        StructureConfig config = lootConfig.getStructure(lootTableId);
-        if (config == null) {
-            // Not a configured structure
-            return;
+        LootPool.Builder gearPool = buildGearPoolBuilder(lootTableId, registries);
+        if (gearPool != null) {
+            poolConsumer.accept(gearPool);
         }
 
-        if (!config.enabled) {
-            Constants.LOGGER.debug("Loot table {} is disabled in config", lootTableId);
+        StructureConfig config = lootConfig.getStructure(lootTableId);
+        if (config == null || !config.enabled) {
             return;
         }
 
         Constants.LOGGER.info("Modifying loot table: {} (tier: {}, rolls: {})",
             lootTableId, config.tier, config.rollsPerChest);
 
-        // Remove vanilla enchanted books if configured
-        if (config.removeVanillaBooks) {
-            // Note: Actual removal would require accessing loot pools
-            // For now we'll just add our own pool which will dominate
-            Constants.LOGGER.debug("Vanilla book removal configured for {}", lootTableId);
+        LootPool.Builder poolBuilder = buildPoolBuilder(lootTableId, config, registries);
+        if (poolBuilder != null) {
+            poolConsumer.accept(poolBuilder);
+            totalModifications++;
         }
-
-        // Inject our enchanted books
-        int entriesAdded = injectEnchantedBooks(tableBuilder, lootTableId, config, registries);
-
-        totalModifications++;
-        totalEnchantmentEntries += entriesAdded;
     }
 
     /**
@@ -175,77 +180,122 @@ public class LootDistributionManager {
         return tier != null ? tier : StructureTier.MEDIUM;
     }
 
-    /**
-     * Injects enchanted books into a loot table based on structure configuration.
-     *
-     * @return The number of enchantment entries added
-     */
-    private int injectEnchantedBooks(
+    private void injectEnchantedBooks(
+        String lootTableId,
         LootTable.Builder tableBuilder,
+        HolderLookup.Provider registries
+    ) {
+        if (!initialized) {
+            Constants.LOGGER.warn("LootDistributionManager not initialized, skipping modification");
+            return;
+        }
+
+        StructureConfig config = lootConfig.getStructure(lootTableId);
+        if (config == null || !config.enabled) {
+            return;
+        }
+
+        Constants.LOGGER.info("Modifying loot table: {} (tier: {}, rolls: {})",
+            lootTableId, config.tier, config.rollsPerChest);
+
+        LootPool.Builder gearPool = buildGearPoolBuilder(lootTableId, registries);
+        if (gearPool != null) {
+            tableBuilder.withPool(gearPool);
+        }
+
+        LootPool.Builder poolBuilder = buildPoolBuilder(lootTableId, config, registries);
+        if (poolBuilder != null) {
+            tableBuilder.withPool(poolBuilder);
+            totalModifications++;
+        }
+    }
+
+    private static final String ARCHAEOLOGY_PREFIX = "minecraft:archaeology/";
+    private static final String TRADESCHOOL_NAMESPACE = "tradeschool";
+
+    private LootPool.Builder buildGearPoolBuilder(String lootTableId, HolderLookup.Provider registries) {
+        if (!lootTableId.startsWith(ARCHAEOLOGY_PREFIX)) return null;
+
+        String name = lootTableId.substring(ARCHAEOLOGY_PREFIX.length());
+        ResourceKey<LootTable> gearKey = ResourceKey.create(
+            Registries.LOOT_TABLE,
+            Identifier.fromNamespaceAndPath(TRADESCHOOL_NAMESPACE, "archaeology/" + name)
+        );
+
+        var lookup = registries.lookup(Registries.LOOT_TABLE);
+        if (lookup.isEmpty() || lookup.get().get(gearKey).isEmpty()) return null;
+
+        return LootPool.lootPool()
+            .setRolls(ConstantValue.exactly(1))
+            .add(NestedLootTable.lootTableReference(gearKey));
+    }
+
+    private LootPool.Builder buildPoolBuilder(
         String lootTableId,
         StructureConfig config,
         HolderLookup.Provider registries
     ) {
-        // Build list of enchantments to include
         List<EnchantmentEntry> enchantments = buildEnchantmentList(config);
 
         if (enchantments.isEmpty()) {
             Constants.LOGGER.warn("No enchantments configured for {} - skipping", lootTableId);
-            return 0;
+            return null;
         }
 
-        // Get structure tier for curse probability
         StructureTier tier = config.getTier();
         if (tier == null) {
             Constants.LOGGER.warn("Invalid tier for {}, defaulting to MEDIUM", lootTableId);
             tier = StructureTier.MEDIUM;
         }
 
-        // Create loot pool for enchanted books
         LootPool.Builder poolBuilder = LootPool.lootPool()
-            .setRolls(ConstantValue.exactly(config.rollsPerChest))
+            .setRolls(config.bookChance < 1.0f
+                ? BinomialDistributionGenerator.binomial(config.rollsPerChest, config.bookChance)
+                : ConstantValue.exactly(config.rollsPerChest))
             .setBonusRolls(ConstantValue.exactly(0));
 
         int entriesAdded = 0;
         int maxLevel = config.getMaxEnchantmentLevel();
 
-        // Add entries for each enchantment at each level
         for (EnchantmentEntry entry : enchantments) {
             int enchantMaxLevel = entry.maxLevel != null ? entry.maxLevel : maxLevel;
-            enchantMaxLevel = Math.min(enchantMaxLevel, maxLevel); // Cap by tier
+            enchantMaxLevel = Math.min(enchantMaxLevel, maxLevel);
 
             for (int level = 1; level <= enchantMaxLevel; level++) {
-                // Calculate weight - decreases exponentially with level
                 int weight = calculateWeight(entry.weight, level, enchantMaxLevel);
 
-                // Create enchanted book WITHOUT curse (curse applied dynamically via loot function)
-                ItemStack book = EnchantedBookBuilder.create(
-                    entry.enchantmentId,
-                    level,
-                    registries
-                );
+                try {
+                    Identifier enchantmentLoc = Identifier.parse(entry.enchantmentId);
+                    ResourceKey<net.minecraft.world.item.enchantment.Enchantment> enchantmentKey =
+                        ResourceKey.create(Registries.ENCHANTMENT, enchantmentLoc);
+                    Holder<net.minecraft.world.item.enchantment.Enchantment> enchantmentHolder =
+                        registries.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(enchantmentKey);
 
-                // Add to loot pool with curse function applied dynamically
-                poolBuilder.add(LootItem.lootTableItem(book.getItem())
-                    .setWeight(weight)
-                    .apply(SetComponentsFunction.setComponent(DataComponents.STORED_ENCHANTMENTS,
-                        book.get(DataComponents.STORED_ENCHANTMENTS)))
-                    .apply(ApplyCurseOfCopyrightFunction.applyCurse(tier))
-                );
+                    ItemEnchantments.Mutable storedEnchantments = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+                    storedEnchantments.set(enchantmentHolder, level);
 
-                Constants.LOGGER.debug("Added {} level {} to loot pool with curse function (tier: {})",
-                    entry.enchantmentId, level, tier);
+                    poolBuilder.add(LootItem.lootTableItem(Items.ENCHANTED_BOOK)
+                        .setWeight(weight)
+                        .apply(SetComponentsFunction.setComponent(DataComponents.STORED_ENCHANTMENTS,
+                            storedEnchantments.toImmutable()))
+                        .apply(ApplyCurseOfCopyrightFunction.applyCurse(tier))
+                    );
+                } catch (Exception e) {
+                    Constants.LOGGER.error("Failed to add loot entry for enchantment {} level {}",
+                        entry.enchantmentId, level, e);
+                    continue;
+                }
 
                 entriesAdded++;
             }
         }
 
-        tableBuilder.withPool(poolBuilder);
+        totalEnchantmentEntries += entriesAdded;
 
         Constants.LOGGER.info("Added {} enchanted book entries to {} ({} unique enchantments, max level {})",
             entriesAdded, lootTableId, enchantments.size(), maxLevel);
 
-        return entriesAdded;
+        return poolBuilder;
     }
 
     /**

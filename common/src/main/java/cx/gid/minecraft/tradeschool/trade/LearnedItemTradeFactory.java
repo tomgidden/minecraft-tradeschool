@@ -1,11 +1,11 @@
 package cx.gid.minecraft.tradeschool.trade;
 
+import cx.gid.minecraft.tradeschool.Constants;
 import cx.gid.minecraft.tradeschool.data.ItemKnowledge;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.ItemCost;
@@ -19,7 +19,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * For Weaponsmiths, Toolsmiths, Armourers, and Fletchers.
  */
-public class LearnedItemTradeFactory implements VillagerTrades.ItemListing {
+public class LearnedItemTradeFactory {
 
     private final ItemKnowledge itemKnowledge;
 
@@ -27,7 +27,6 @@ public class LearnedItemTradeFactory implements VillagerTrades.ItemListing {
         this.itemKnowledge = itemKnowledge;
     }
 
-    @Override
     @Nullable
     public MerchantOffer getOffer(ServerLevel level, Entity trader, RandomSource random) {
         if (!(trader instanceof Villager)) {
@@ -36,6 +35,11 @@ public class LearnedItemTradeFactory implements VillagerTrades.ItemListing {
 
         // Create the enchanted item from knowledge
         ItemStack offeredItem = itemKnowledge.createItemStack();
+
+        Constants.LOGGER.info("LearnedItemTrade: offering {} with {} enchantments for {} emeralds (baseItem={})",
+            offeredItem.getItem(), offeredItem.getEnchantments().size(),
+            ItemPricingCalculator.calculateSellingPrice(itemKnowledge),
+            itemKnowledge.getBaseItem().unwrapKey().map(k -> k.toString()).orElse("?"));
 
         // Calculate price based on material and enchantments
         int price = ItemPricingCalculator.calculateSellingPrice(itemKnowledge);

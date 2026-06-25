@@ -87,7 +87,10 @@ public abstract class VillagerTradesMixin {
 
         Constants.LOGGER.debug("Generating trades for librarian (level {})", professionLevel);
 
-        // Add trades for all learned enchantments up to current level
+        // Vanilla non-book trades first (paper, bookshelf, etc.)
+        addVanillaNonBookTrades(villager, offers, professionLevel);
+
+        // Learned enchantment trades at the bottom
         java.util.List<cx.gid.minecraft.tradeschool.data.EnchantmentKnowledge> learnedEnchants = knowledge
                 .getKnowledgeUpToLevel(professionLevel);
         for (cx.gid.minecraft.tradeschool.data.EnchantmentKnowledge enchantKnowledge : learnedEnchants) {
@@ -101,9 +104,6 @@ public abstract class VillagerTradesMixin {
                         enchantKnowledge.getLearnedAtLevel());
             }
         }
-
-        // 4. Add vanilla non-book trades (paper, bookshelf, etc.)
-        addVanillaNonBookTrades(villager, offers, professionLevel);
 
         Constants.LOGGER.debug("Generated {} total trades for librarian", offers.size());
     }
@@ -229,7 +229,10 @@ public abstract class VillagerTradesMixin {
 
         Constants.LOGGER.debug("Generating trades for {} (level {})", professionId, professionLevel);
 
-        // Add trades for all learned items up to current level
+        // Vanilla basic trades first (iron, coal, etc.)
+        addVanillaBasicTrades(villager, offers, professionLevel, professionId);
+
+        // Learned item trades at the bottom — one per learned level, up to current level
         java.util.List<cx.gid.minecraft.tradeschool.data.ItemKnowledge> learnedItems =
             knowledge.getItemKnowledgeUpToLevel(professionLevel);
         for (cx.gid.minecraft.tradeschool.data.ItemKnowledge itemKnowledge : learnedItems) {
@@ -243,9 +246,6 @@ public abstract class VillagerTradesMixin {
                         itemKnowledge.getLearnedAtLevel());
             }
         }
-
-        // 3. Add vanilla basic trades (iron, coal, etc. - NOT enchanted items)
-        addVanillaBasicTrades(villager, offers, professionLevel, professionId);
 
         Constants.LOGGER.debug("Generated {} total trades for {}", offers.size(), professionId);
     }

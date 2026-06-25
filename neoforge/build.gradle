@@ -1,0 +1,60 @@
+plugins {
+    id 'net.neoforged.moddev' version "${neoforge_moddev_version}"
+}
+
+base {
+    archivesName = "${project.archives_base_name}-neoforge"
+}
+
+sourceSets {
+    gametest {
+        compileClasspath += main.compileClasspath + main.output + project(':common').sourceSets.main.output
+        runtimeClasspath += main.runtimeClasspath + main.output + project(':common').sourceSets.main.output
+    }
+}
+
+neoForge {
+    version = project.neoforge_version
+    mods {
+        tradeschool {
+            sourceSet sourceSets.main
+            sourceSet project(':common').sourceSets.main
+        }
+        "tradeschool_gametest" {
+            sourceSet sourceSets.gametest
+        }
+    }
+    runs {
+        gameTestServer {
+            type = "gameTestServer"
+            getSourceSet().set(sourceSets.gametest)
+        }
+    }
+}
+
+configurations.all {
+    exclude group: 'net.fabricmc', module: 'fabric-loader'
+}
+
+dependencies {
+    implementation project(':common')
+    gametestImplementation project(':common')
+}
+
+processResources {
+    def props = [
+        version: project.version,
+        mod_id: project.mod_id,
+        mod_name: project.mod_name,
+        minecraft_version: project.minecraft_version,
+        neoforge_version: project.neoforge_version
+    ]
+    inputs.properties props
+    filesMatching("META-INF/neoforge.mods.toml") { expand props }
+}
+
+jar {
+    from(project(':common').sourceSets.main.output)
+    def baseName = base.archivesName.get()
+    from('../LICENSE.txt') { rename { "${it}_${baseName}" } }
+}

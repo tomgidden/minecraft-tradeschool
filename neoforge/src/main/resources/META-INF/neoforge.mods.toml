@@ -1,0 +1,30 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+mixins = [{config = "tradeschool.mixins.json"}]
+
+[[mods]]
+modId = "${mod_id}"
+version = "${version}"
+displayName = "${mod_name}"
+logoFile = "assets/tradeschool/icon.png"
+description = """
+Proof-of-concept of an alternative Villager Trading mechanic using a teaching system,
+to encourage exploration and reduce random grind. Teach librarians, weaponsmiths,
+toolsmiths, armourers, and fletchers by selling them enchanted items — they'll learn
+and resell what you teach! Pre-alpha development build.
+"""
+
+[[dependencies.tradeschool]]
+modId = "neoforge"
+type = "required"
+versionRange = "[${neoforge_version},27)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.tradeschool]]
+modId = "minecraft"
+type = "required"
+versionRange = "[${minecraft_version},27)"
+ordering = "NONE"
+side = "BOTH"

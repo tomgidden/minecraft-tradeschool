@@ -11,6 +11,10 @@ public class TradeSchool {
         Constants.LOGGER.info("Trade School Mod initialized successfully");
     }
 
+    public static void initWithoutRegistry() {
+        Constants.LOGGER.info("Trade School Mod initialized successfully");
+    }
+
     public static void onServerStarting(MinecraftServer server) {
         LootDistributionManager manager = LootDistributionManager.getInstance();
         manager.initialize(server);

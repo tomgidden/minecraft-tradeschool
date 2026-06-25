@@ -45,39 +45,77 @@ public class ItemPricingCalculator {
      * Gets the base price for an unenchanted item based on material and type.
      */
     private static int getBaseItemPrice(Item item) {
-        // Netherite items (most expensive)
-        if (item == Items.NETHERITE_CHESTPLATE) return 18;
-        if (item == Items.NETHERITE_LEGGINGS) return 16;
-        if (item == Items.NETHERITE_HELMET) return 14;
-        if (item == Items.NETHERITE_BOOTS) return 12;
-        if (item == Items.NETHERITE_SWORD || item == Items.NETHERITE_PICKAXE) return 15;
-        if (item == Items.NETHERITE_AXE || item == Items.NETHERITE_SHOVEL) return 13;
-        if (item == Items.NETHERITE_HOE) return 11;
-
-        // Diamond items
+        // Diamond
         if (item == Items.DIAMOND_CHESTPLATE) return 14;
-        if (item == Items.DIAMOND_LEGGINGS) return 12;
-        if (item == Items.DIAMOND_HELMET) return 10;
-        if (item == Items.DIAMOND_BOOTS) return 8;
+        if (item == Items.DIAMOND_LEGGINGS)   return 12;
+        if (item == Items.DIAMOND_HELMET)     return 10;
+        if (item == Items.DIAMOND_BOOTS)      return 8;
         if (item == Items.DIAMOND_SWORD || item == Items.DIAMOND_PICKAXE) return 11;
-        if (item == Items.DIAMOND_AXE || item == Items.DIAMOND_SHOVEL) return 9;
-        if (item == Items.DIAMOND_HOE) return 7;
+        if (item == Items.DIAMOND_AXE  || item == Items.DIAMOND_SHOVEL)   return 9;
+        if (item == Items.DIAMOND_HOE)        return 7;
 
-        // Iron items (least expensive)
+        // Iron
         if (item == Items.IRON_CHESTPLATE) return 8;
-        if (item == Items.IRON_LEGGINGS) return 7;
-        if (item == Items.IRON_HELMET) return 6;
-        if (item == Items.IRON_BOOTS) return 5;
+        if (item == Items.IRON_LEGGINGS)   return 7;
+        if (item == Items.IRON_HELMET)     return 6;
+        if (item == Items.IRON_BOOTS)      return 5;
         if (item == Items.IRON_SWORD || item == Items.IRON_PICKAXE) return 6;
-        if (item == Items.IRON_AXE || item == Items.IRON_SHOVEL) return 5;
-        if (item == Items.IRON_HOE) return 4;
+        if (item == Items.IRON_AXE  || item == Items.IRON_SHOVEL)   return 5;
+        if (item == Items.IRON_HOE)        return 4;
 
-        // Ranged weapons (for Fletchers)
-        if (item == Items.BOW) return 5;
-        if (item == Items.CROSSBOW) return 6;
+        // Chainmail
+        if (item == Items.CHAINMAIL_CHESTPLATE) return 6;
+        if (item == Items.CHAINMAIL_LEGGINGS)   return 5;
+        if (item == Items.CHAINMAIL_HELMET)     return 4;
+        if (item == Items.CHAINMAIL_BOOTS)      return 3;
 
-        // Default for unknown items
-        return 5;
+        // Gold armor (nether value — priced above copper)
+        if (item == Items.GOLDEN_CHESTPLATE) return 5;
+        if (item == Items.GOLDEN_LEGGINGS)   return 4;
+        if (item == Items.GOLDEN_HELMET)     return 3;
+        if (item == Items.GOLDEN_BOOTS)      return 2;
+
+        // Copper armor
+        if (item == Items.COPPER_CHESTPLATE) return 4;
+        if (item == Items.COPPER_LEGGINGS)   return 3;
+        if (item == Items.COPPER_HELMET)     return 2;
+        if (item == Items.COPPER_BOOTS)      return 2;
+
+        // Leather
+        if (item == Items.LEATHER_CHESTPLATE) return 3;
+        if (item == Items.LEATHER_LEGGINGS)   return 2;
+        if (item == Items.LEATHER_HELMET)     return 2;
+        if (item == Items.LEATHER_BOOTS)      return 1;
+
+        // Copper weapons/tools
+        if (item == Items.COPPER_SWORD || item == Items.COPPER_PICKAXE) return 4;
+        if (item == Items.COPPER_AXE   || item == Items.COPPER_SHOVEL)  return 3;
+        if (item == Items.COPPER_HOE)   return 2;
+
+        // Gold weapons/tools (nether value)
+        if (item == Items.GOLDEN_SWORD || item == Items.GOLDEN_PICKAXE) return 4;
+        if (item == Items.GOLDEN_AXE   || item == Items.GOLDEN_SHOVEL)  return 3;
+        if (item == Items.GOLDEN_HOE)   return 2;
+
+        // Stone
+        if (item == Items.STONE_SWORD || item == Items.STONE_PICKAXE) return 3;
+        if (item == Items.STONE_AXE   || item == Items.STONE_SHOVEL)  return 2;
+        if (item == Items.STONE_HOE)   return 1;
+
+        // Wood
+        if (item == Items.WOODEN_SWORD || item == Items.WOODEN_PICKAXE) return 2;
+        if (item == Items.WOODEN_AXE   || item == Items.WOODEN_SHOVEL)  return 1;
+        if (item == Items.WOODEN_HOE)  return 1;
+
+        // Shield
+        if (item == Items.SHIELD) return 5;
+
+        // Ranged (Fletcher)
+        if (item == Items.BOW)         return 5;
+        if (item == Items.CROSSBOW)    return 6;
+        if (item == Items.TIPPED_ARROW) return 8;
+
+        return 3;
     }
 
     /**

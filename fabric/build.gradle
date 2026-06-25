@@ -1,61 +1,58 @@
-architectury {
-    platformSetupLoomIde()
-    fabric()
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${fabric_loom_version}"
+}
+
+base {
+    archivesName = "${project.archives_base_name}-fabric"
+}
+
+sourceSets {
+    gametest {
+        compileClasspath += main.compileClasspath + main.output
+        runtimeClasspath += main.runtimeClasspath + main.output
+    }
 }
 
 loom {
-    accessWidenerPath = project(":common").loom.accessWidenerPath
-}
+    mods {
+        "tradeschool" { sourceSet sourceSets.main }
+        "tradeschool-gametest" { sourceSet sourceSets.gametest }
+    }
 
-configurations {
-    common
-    shadowCommon
-    compileClasspath.extendsFrom common
-    runtimeClasspath.extendsFrom common
-    developmentFabric.extendsFrom common
+    runs {
+        gameTestServer {
+            server()
+            name "Game Test Server"
+            source sourceSets.gametest
+            vmArg "-Dfabric-api.gametest"
+            vmArg "-Dfabric-api.gametest.report-file=${project.buildDir}/junit.xml"
+        }
+    }
 }
 
 dependencies {
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-    modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_version}"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+    implementation project(':common')
 
-    // Architectury API for Fabric
-    modApi("dev.architectury:architectury-fabric:${rootProject.architectury_version}") {
-        exclude group: "net.fabricmc.fabric-api"
-    }
-
-    common(project(path: ":common", configuration: "namedElements")) { transitive false }
-    shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
+    // fabric-gametest-api-v1 is bundled inside fabric-api — no extra dependency needed
 }
 
 processResources {
-    inputs.property "version", project.version
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-               "mod_id": project.mod_id,
-               "mod_name": project.mod_name,
-               "mod_group": project.mod_group,
-               "minecraft_version": project.minecraft_version,
-               "loader_version": project.loader_version,
-               "architectury_version": project.architectury_version
-    }
+    def props = [
+        version: project.version,
+        mod_id: project.mod_id,
+        mod_name: project.mod_name,
+        minecraft_version: project.minecraft_version,
+        fabric_loader_version: project.fabric_loader_version
+    ]
+    inputs.properties props
+    filesMatching("fabric.mod.json") { expand props }
 }
 
 jar {
-    from(project(":common").sourceSets.main.output)
-    archiveClassifier.set("dev")
-}
-
-remapJar {
-    injectAccessWidener = true
-    input.set(jar.archiveFile)
-    dependsOn jar
-    archiveClassifier.set(null)
-}
-
-sourcesJar {
-    def commonSources = project(":common").sourcesJar
-    dependsOn commonSources
-    from commonSources.archiveFile.map { zipTree(it) }
+    from(project(':common').sourceSets.main.output)
+    def baseName = base.archivesName.get()
+    from('../LICENSE.txt') { rename { "${it}_${baseName}" } }
 }

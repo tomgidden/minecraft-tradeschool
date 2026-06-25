@@ -1,13 +1,14 @@
 pluginManagement {
     repositories {
-        maven { url "https://maven.fabricmc.net/" }
-        maven { url "https://maven.architectury.dev/" }
-        maven { url "https://maven.minecraftforge.net/" }
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        maven { name = 'NeoForge'; url = 'https://maven.neoforged.net/releases/' }
+        mavenCentral()
         gradlePluginPortal()
     }
 }
 
-rootProject.name = "tradeschool"
+rootProject.name = 'tradeschool'
 
-include("common")
-include("fabric")
+include 'common'
+include 'fabric'
+include 'neoforge'

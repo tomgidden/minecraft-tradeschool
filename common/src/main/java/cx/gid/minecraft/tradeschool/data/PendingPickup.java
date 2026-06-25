@@ -15,24 +15,27 @@ public class PendingPickup {
     public final Holder<Enchantment> enchantment; // For books
     public final int enchantmentLevel; // For books
     public int ticksRemaining;
+    public final int emeraldPayment; // Emeralds to drop on pickup
 
     // Constructor for enchanted books
-    public PendingPickup(ItemEntity entity, ItemStack stack, Holder<Enchantment> ench, int level, int delay) {
+    public PendingPickup(ItemEntity entity, ItemStack stack, Holder<Enchantment> ench, int level, int delay, int emeralds) {
         this.itemEntity = entity;
         this.itemStack = stack.copy();
         this.isBook = true;
         this.enchantment = ench;
         this.enchantmentLevel = level;
         this.ticksRemaining = delay;
+        this.emeraldPayment = emeralds;
     }
 
     // Constructor for enchanted items
-    public PendingPickup(ItemEntity entity, ItemStack stack, int delay) {
+    public PendingPickup(ItemEntity entity, ItemStack stack, int delay, int emeralds) {
         this.itemEntity = entity;
         this.itemStack = stack.copy();
         this.isBook = false;
         this.enchantment = null;
         this.enchantmentLevel = 0;
         this.ticksRemaining = delay;
+        this.emeraldPayment = emeralds;
     }
 }

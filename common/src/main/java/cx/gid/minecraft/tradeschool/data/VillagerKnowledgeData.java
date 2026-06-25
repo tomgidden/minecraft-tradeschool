@@ -23,15 +23,15 @@ public class VillagerKnowledgeData {
     // Max 5 entries (one per profession level)
     private final Map<Integer, EnchantmentKnowledge> knowledgeByLevel;
 
-    // Map: profession level (1-5) → learned item (for Weaponsmiths/Toolsmiths/Armourers/Fletchers)
-    // Max 5 entries (one per profession level)
-    private final Map<Integer, ItemKnowledge> itemKnowledgeByLevel;
+    // Map: "professionId:level" → learned item (for Weaponsmiths/Toolsmiths/Armourers/Fletchers)
+    // Keyed by profession so a villager that changes job doesn't carry over knowledge.
+    private final Map<String, ItemKnowledge> itemKnowledgeByProfessionLevel;
 
     public VillagerKnowledgeData(UUID uuid) {
         this.villagerUUID = uuid;
         this.hasInitialTrade = false;
         this.knowledgeByLevel = new HashMap<>();
-        this.itemKnowledgeByLevel = new HashMap<>();
+        this.itemKnowledgeByProfessionLevel = new HashMap<>();
     }
 
     public UUID getVillagerUUID() {
@@ -98,50 +98,72 @@ public class VillagerKnowledgeData {
 
     /**
      * Returns the item learned at a specific profession level.
-     * Returns null if no item learned at that level yet.
+     * Profession is locked on first trade so no professionId needed in the key.
      */
     public ItemKnowledge getItemKnowledgeAtLevel(int professionLevel) {
-        return itemKnowledgeByLevel.get(professionLevel);
+        // New key format: just the level
+        ItemKnowledge k = itemKnowledgeByProfessionLevel.get(String.valueOf(professionLevel));
+        if (k != null) return k;
+        // Back-compat: try old "professionId:level" keys
+        for (Map.Entry<String, ItemKnowledge> entry : itemKnowledgeByProfessionLevel.entrySet()) {
+            String key = entry.getKey();
+            if (key.endsWith(":" + professionLevel)) return entry.getValue();
+        }
+        return null;
+    }
+
+    /** Back-compat overload that accepts a professionId (now ignored). */
+    public ItemKnowledge getItemKnowledgeAtLevel(String professionId, int professionLevel) {
+        return getItemKnowledgeAtLevel(professionLevel);
     }
 
     /**
      * Teaches the villager a new item at their current profession level.
-     * If an item already exists at this level, it will be replaced.
-     *
-     * @param professionLevel The villager's current profession level (1-5)
-     * @param itemKnowledge The item knowledge to learn
-     * @return true if taught successfully
+     * Keyed by level only — profession is locked on first trade.
      */
     public boolean teachItem(int professionLevel, ItemKnowledge itemKnowledge) {
-        itemKnowledgeByLevel.put(professionLevel, itemKnowledge);
+        itemKnowledgeByProfessionLevel.put(String.valueOf(professionLevel), itemKnowledge);
         return true;
+    }
+
+    /** Back-compat overload that accepts a professionId (now ignored). */
+    public boolean teachItem(String professionId, int professionLevel, ItemKnowledge itemKnowledge) {
+        return teachItem(professionLevel, itemKnowledge);
     }
 
     /**
      * Gets all learned items up to and including the given profession level.
-     *
-     * @param maxLevel The villager's current profession level
-     * @return List of all learned items from level 1 to maxLevel
      */
     public List<ItemKnowledge> getItemKnowledgeUpToLevel(int maxLevel) {
-        return itemKnowledgeByLevel.entrySet().stream()
-                .filter(entry -> entry.getKey() <= maxLevel)
-                .map(Map.Entry::getValue)
-                .collect(Collectors.toList());
+        List<ItemKnowledge> result = new ArrayList<>();
+        for (int lvl = 1; lvl <= maxLevel; lvl++) {
+            ItemKnowledge k = getItemKnowledgeAtLevel(lvl);
+            if (k != null) result.add(k);
+        }
+        return result;
+    }
+
+    /** Back-compat overload that accepts a professionId (now ignored). */
+    public List<ItemKnowledge> getItemKnowledgeUpToLevel(String professionId, int maxLevel) {
+        return getItemKnowledgeUpToLevel(maxLevel);
     }
 
     /**
-     * Checks if the villager has learned any items.
+     * Checks if the villager has learned any items for the given profession.
      */
+    public boolean hasLearnedAnyItems(String professionId) {
+        return itemKnowledgeByProfessionLevel.keySet().stream().anyMatch(k -> k.startsWith(professionId + ":"));
+    }
+
     public boolean hasLearnedAnyItems() {
-        return !itemKnowledgeByLevel.isEmpty();
+        return !itemKnowledgeByProfessionLevel.isEmpty();
     }
 
     /**
-     * Gets the total number of items learned (max 5).
+     * Gets the total number of items learned across all professions.
      */
     public int getLearnedItemCount() {
-        return itemKnowledgeByLevel.size();
+        return itemKnowledgeByProfessionLevel.size();
     }
 
     /**
@@ -161,17 +183,20 @@ public class VillagerKnowledgeData {
     }
 
     /**
-     * Checks if the villager already knows a specific item type (at any level).
-     * Used to prevent teaching duplicate items.
-     *
-     * @param item The item type to check
-     * @return true if the villager already knows this item type
+     * Checks if the villager already knows a specific item type for the given profession (at any level).
      */
-    public boolean alreadyKnowsItem(net.minecraft.world.item.Item item) {
-        for (ItemKnowledge knowledge : itemKnowledgeByLevel.values()) {
-            if (knowledge.getBaseItem().value().equals(item)) {
+    public boolean alreadyKnowsItem(String professionId, net.minecraft.world.item.Item item) {
+        for (Map.Entry<String, ItemKnowledge> entry : itemKnowledgeByProfessionLevel.entrySet()) {
+            if (entry.getKey().startsWith(professionId + ":") && entry.getValue().getBaseItem().value().equals(item)) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    public boolean alreadyKnowsItem(net.minecraft.world.item.Item item) {
+        for (ItemKnowledge knowledge : itemKnowledgeByProfessionLevel.values()) {
+            if (knowledge.getBaseItem().value().equals(item)) return true;
         }
         return false;
     }
@@ -197,11 +222,11 @@ public class VillagerKnowledgeData {
         }
         nbt.put("LearnedEnchantments", knowledgeList);
 
-        // Serialize learned items
+        // Serialize learned items (key = "professionId:level")
         ListTag itemKnowledgeList = new ListTag();
-        for (Map.Entry<Integer, ItemKnowledge> entry : itemKnowledgeByLevel.entrySet()) {
+        for (Map.Entry<String, ItemKnowledge> entry : itemKnowledgeByProfessionLevel.entrySet()) {
             CompoundTag itemTag = new CompoundTag();
-            itemTag.putInt("Level", entry.getKey());
+            itemTag.putString("ProfessionLevelKey", entry.getKey());
             itemTag.put("Knowledge", entry.getValue().toNbt(registryAccess));
             itemKnowledgeList.add(itemTag);
         }
@@ -239,13 +264,15 @@ public class VillagerKnowledgeData {
         ListTag itemKnowledgeList = nbt.getList("LearnedItems").orElse(new ListTag());
         for (Tag tag : itemKnowledgeList) {
             CompoundTag itemTag = (CompoundTag) tag;
-            int level = itemTag.getInt("Level").orElse(1);
+            // Support both old format (Level int) and new format (ProfessionLevelKey string)
+            String key = itemTag.getString("ProfessionLevelKey").orElse(null);
+            if (key == null) {
+                int level = itemTag.getInt("Level").orElse(1);
+                key = "unknown:" + level;
+            }
             CompoundTag itemNbt = itemTag.getCompound("Knowledge").orElse(new CompoundTag());
-            ItemKnowledge itemKnowledge = ItemKnowledge.fromNbt(
-                    itemNbt,
-                    registryAccess
-            );
-            data.itemKnowledgeByLevel.put(level, itemKnowledge);
+            ItemKnowledge itemKnowledge = ItemKnowledge.fromNbt(itemNbt, registryAccess);
+            data.itemKnowledgeByProfessionLevel.put(key, itemKnowledge);
         }
 
         return data;

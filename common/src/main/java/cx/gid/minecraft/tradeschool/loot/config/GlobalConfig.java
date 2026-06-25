@@ -6,6 +6,7 @@ import java.util.Map;
  * Global configuration settings that apply to all loot table modifications and villager trading.
  */
 public class GlobalConfig {
+    public boolean enabled = true;
     public Map<String, Integer> defaultTierMaxLevels;
     public double defaultCrossoverChance;
     public boolean removeAllVanillaEnchantedBooks;
@@ -28,6 +29,7 @@ public class GlobalConfig {
         boolean removeAllVanillaEnchantedBooks,
         boolean allowNonTradableTreasure
     ) {
+        this.enabled = true;
         this.defaultTierMaxLevels = defaultTierMaxLevels;
         this.defaultCrossoverChance = defaultCrossoverChance;
         this.removeAllVanillaEnchantedBooks = removeAllVanillaEnchantedBooks;

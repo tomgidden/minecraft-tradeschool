@@ -1,56 +1,16 @@
-plugins {
-    id "dev.architectury.loom" version "1.13-SNAPSHOT" apply false
-    id "architectury-plugin" version "3.4-SNAPSHOT"
-    id "java"
-}
-
-architectury {
-    minecraft = rootProject.minecraft_version
-}
-
 subprojects {
-    apply plugin: "dev.architectury.loom"
-    apply plugin: "architectury-plugin"
+    group = project.mod_group
+    version = project.mod_version
 
-    repositories {
-        mavenCentral()
-        maven { url "https://maven.fabricmc.net/" }
-        maven { url "https://maven.architectury.dev/" }
-        maven { url "https://maven.minecraftforge.net/" }
-    }
-
-    dependencies {
-        minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-        mappings loom.officialMojangMappings()
-    }
-
-    java {
-        withSourcesJar()
-        toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+    plugins.withId('java') {
+        java {
+            sourceCompatibility = JavaVersion.VERSION_25
+            targetCompatibility = JavaVersion.VERSION_25
         }
-    }
-}
-
-allprojects {
-    apply plugin: "java"
-    apply plugin: "architectury-plugin"
-
-    version = rootProject.mod_version
-    group = rootProject.mod_group
-
-    repositories {
-        mavenCentral()
-        maven { url "https://maven.fabricmc.net/" }
-        maven { url "https://maven.architectury.dev/" }
     }
 
     tasks.withType(JavaCompile).configureEach {
-        options.encoding = "UTF-8"
-        options.release = 21
-    }
-
-    java {
-        withSourcesJar()
+        it.options.encoding = 'UTF-8'
+        it.options.release = 25
     }
 }

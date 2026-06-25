@@ -1,0 +1,21 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "cx.gid.minecraft.tradeschool.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "VillagerEntityMixin",
+    "VillagerTradesAccessor",
+    "AbstractVillagerAccessor",
+    "VillagerTradesMixin",
+    "VillagerDataMixin",
+    "VillagerPickupMixin",
+    "AbstractVillagerTeachMixin",
+    "MerchantResultSlotMixin",
+    "ServerPlayerMixin"
+  ],
+  "client": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

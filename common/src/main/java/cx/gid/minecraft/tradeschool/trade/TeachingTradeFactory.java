@@ -13,7 +13,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -26,8 +25,12 @@ import org.jetbrains.annotations.Nullable;
  * Creates "teaching" trades where players sell enchanted books to librarians.
  * The librarian learns the enchantment type from the book.
  * Book is consumed and villager pays emeralds.
+ *
+ * Hardcoded English for server-side-only proof-of-concept only.
+ * A complete implementation would use Component.translatable(...) with proper keys
+ * but would require the mod client-side for i18n.
  */
-public class TeachingTradeFactory implements VillagerTrades.ItemListing {
+public class TeachingTradeFactory {
 
     private final int professionLevel; // Current villager profession level
 
@@ -35,7 +38,6 @@ public class TeachingTradeFactory implements VillagerTrades.ItemListing {
         this.professionLevel = professionLevel;
     }
 
-    @Override
     @Nullable
     public MerchantOffer getOffer(ServerLevel level, Entity trader, RandomSource random) {
         if (!(trader instanceof Villager villager)) {
@@ -174,7 +176,8 @@ public class TeachingTradeFactory implements VillagerTrades.ItemListing {
             return;
         }
 
-        Component message = Component.translatable("tradeschool.teaching.curse_rejected");
+        // Should be Component.translatable("tradeschool.teaching.curse_rejected") with a lang file client-side.
+        Component message = Component.literal("The villager refuses to study copyrighted material!");
 
         // Send to all players within 16 blocks
         serverLevel.getPlayers(player -> {

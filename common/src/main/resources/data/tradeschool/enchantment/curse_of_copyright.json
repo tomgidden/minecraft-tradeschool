@@ -1,6 +1,7 @@
 {
+  "_comment": "Hardcoded English for server-side-only proof-of-concept only. description should be {\"translate\": \"enchantment.tradeschool.curse_of_copyright\"} but that would require the mod client-side for i18n.",
   "description": {
-    "translate": "enchantment.tradeschool.curse_of_copyright"
+    "text": "Curse of Copyright"
   },
   "supported_items": "#minecraft:enchantable/durability",
   "weight": 1,

@@ -1,16 +1,22 @@
-architectury {
-    common("fabric")
+plugins {
+    id 'net.fabricmc.fabric-loom' version "${fabric_loom_version}"
+}
+
+base {
+    archivesName = "${project.archives_base_name}-common"
 }
 
 loom {
-    accessWidenerPath = file("src/main/resources/tradeschool.accesswidener")
+    mods {
+        "tradeschool" { sourceSet sourceSets.main }
+    }
 }
 
 dependencies {
-    // We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
-    // Do NOT use other classes from fabric loader
-    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
-
-    // Architectury API
-    modApi "dev.architectury:architectury:${rootProject.architectury_version}"
+    minecraft "com.mojang:minecraft:${project.minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
 }
+
+// Nothing consumes this jar: the loader subprojects copy common's class output
+// straight into their own jars, so building it is pure waste.
+jar { enabled = false }

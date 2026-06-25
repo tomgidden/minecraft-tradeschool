@@ -1,15 +1,12 @@
 {
+  "_comment": "Hardcoded English for server-side-only proof-of-concept only. title/description should be {\"translate\": \"advancements.tradeschool.teach_villager.title\"} etc., but that would require the mod client-side for i18n.",
   "parent": "tradeschool:root",
   "display": {
     "icon": {
       "id": "minecraft:enchanted_book"
     },
-    "title": {
-      "translate": "advancements.tradeschool.teach_villager.title"
-    },
-    "description": {
-      "translate": "advancements.tradeschool.teach_villager.description"
-    },
+    "title": {"text": "Knowledge is Power"},
+    "description": {"text": "Teach a villager by dropping an enchanted item or book near them"},
     "frame": "task",
     "show_toast": true,
     "announce_to_chat": true,

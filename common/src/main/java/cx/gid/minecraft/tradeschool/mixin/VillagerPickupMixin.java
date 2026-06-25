@@ -1,656 +1,527 @@
 package cx.gid.minecraft.tradeschool.mixin;
 
 import cx.gid.minecraft.tradeschool.Constants;
-import cx.gid.minecraft.tradeschool.data.ItemKnowledge;
-import cx.gid.minecraft.tradeschool.data.PendingPickup;
+import cx.gid.minecraft.tradeschool.IVillagerTeachState;
+import cx.gid.minecraft.tradeschool.PlayerHintAccessor;
 import cx.gid.minecraft.tradeschool.data.VillagerKnowledgeData;
 import cx.gid.minecraft.tradeschool.data.VillagerKnowledgeManager;
 import cx.gid.minecraft.tradeschool.enchantment.ModEnchantments;
 import cx.gid.minecraft.tradeschool.trade.EnchantedItemAnalyzer;
+import cx.gid.minecraft.tradeschool.trade.ItemPricingCalculator;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
-import net.minecraft.world.entity.ExperienceOrb;
-import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.ai.behavior.EntityTracker;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
 import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
+import net.minecraft.world.item.trading.ItemCost;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.item.trading.MerchantOffers;
 import net.minecraft.world.phys.AABB;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
 /**
- * Mixin to enable villagers to pick up enchanted items and learn from them.
- * Used for all TradeSchool professions: Librarian, Weaponsmith, Toolsmith, Armourer, Fletcher.
+ * Mixin to enable villagers to learn from items traded via the UI.
+ *
+ * When a player right-clicks a tradeschool villager, all teachable items across
+ * mainhand, offhand, armor slots, and hotbar (up to 6, excluding netherite) get
+ * ephemeral teach offers inserted.
+ *
+ * Dedup is by enchantments only (not damage). Two swords with the same enchants
+ * but different damage collapse to one offer. We record all inventory slots that
+ * hold a qualifying item for each offer group. At notifyTrade time we inspect
+ * the player's inventory to find which slot was consumed, then use that slot's
+ * stored copy (which has the correct damage/repair_cost) as the taught item.
  */
 @Mixin(Villager.class)
-public abstract class VillagerPickupMixin {
+public abstract class VillagerPickupMixin implements IVillagerTeachState {
 
-    @Unique
-    private int tradeschool$pickupCheckCooldown = 0;
+    @Unique private UUID tradeschool$teachingPlayer = null;
+    @Unique private List<Integer>            tradeschool$teachOfferIndices    = new ArrayList<>();
+    @Unique private List<List<Integer>>      tradeschool$teachItemSlotGroups  = new ArrayList<>();
+    @Unique private List<List<ItemStack>>    tradeschool$teachItemStackGroups = new ArrayList<>();
+    @Unique private ItemStack                tradeschool$lastSubmittedItem    = ItemStack.EMPTY;
 
-    @Unique
-    private final Set<UUID> tradeschool$rejectedItems = new HashSet<>();
+    @Override public UUID tradeschool$getTeachingPlayer() { return tradeschool$teachingPlayer; }
+    @Override public void tradeschool$setTeachingPlayer(UUID uuid) { tradeschool$teachingPlayer = uuid; }
+    @Override public List<Integer> tradeschool$getTeachOfferIndices() { return tradeschool$teachOfferIndices; }
+    @Override public void tradeschool$setTeachOfferIndices(List<Integer> i) { tradeschool$teachOfferIndices = i; }
+    @Override public List<List<Integer>> tradeschool$getTeachItemSlotGroups() { return tradeschool$teachItemSlotGroups; }
+    @Override public void tradeschool$setTeachItemSlotGroups(List<List<Integer>> g) { tradeschool$teachItemSlotGroups = g; }
+    @Override public List<List<ItemStack>> tradeschool$getTeachItemStackGroups() { return tradeschool$teachItemStackGroups; }
+    @Override public void tradeschool$setTeachItemStackGroups(List<List<ItemStack>> g) { tradeschool$teachItemStackGroups = g; }
+    @Override public ItemStack tradeschool$getLastSubmittedItem() { return tradeschool$lastSubmittedItem; }
+    @Override public void tradeschool$setLastSubmittedItem(ItemStack s) { tradeschool$lastSubmittedItem = s; }
 
-    @Unique
-    private int tradeschool$lastKnownLevel = 0;
+    @Unique private final Map<UUID, Integer> tradeschool$notifiedHeldItems = new HashMap<>();
+    @Unique private int tradeschool$lastKnownLevel = 0;
 
-    @Unique
-    private final java.util.Map<UUID, PendingPickup> tradeschool$pendingPickups = new java.util.HashMap<>();
+    // Maximum number of simultaneous teach offers.
+    private static final int MAX_TEACH_OFFERS = 6;
+
+    // ── mobInteract — insert teach offers before UI opens ────────────────────
+
+    @Inject(method = "mobInteract", at = @At("HEAD"))
+    private void onMobInteract(Player player, InteractionHand hand, CallbackInfoReturnable<InteractionResult> cir) {
+        if (!(player instanceof ServerPlayer sp)) return;
+        Villager villager = (Villager) (Object) this;
+        if (villager.level().isClientSide()) return;
+
+        String professionId = villager.getVillagerData().profession().toString();
+        if (!isTradeSchoolProfession(professionId)) return;
+
+        // Only one player at a time gets ephemeral teach offers
+        if (tradeschool$teachingPlayer != null && !tradeschool$teachingPlayer.equals(sp.getUUID())) return;
+
+        int professionLevel = villager.getVillagerData().level();
+        VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance().getOrCreateData(villager);
+
+        // No offers if already learned at current level
+        if (knowledge.getItemKnowledgeAtLevel(professionLevel) != null) return;
+
+        // Scan all qualifying slots, grouped by dedup signature (enchantments only, not damage).
+        // Returns: Map from sig → (firstStack, allSlots, allStacks)
+        ScanResult scan = tradeschool$scanAndGroup(sp, professionId, villager);
+        if (scan.groups.isEmpty()) return;
+
+        // Debug: log all found groups and their slot copies
+        for (OfferGroup g : scan.groups) {
+            for (int gi = 0; gi < g.slots.size(); gi++) {
+                ItemStack s = g.stacks.get(gi);
+                ItemEnchantments ge = s.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+                if (ge.isEmpty()) ge = s.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+                Constants.LOGGER.info("[TradeSchool] Teachable slot {}: item={} enchants={} damage={} repair_cost={}",
+                    g.slots.get(gi), s.getItem(), ge,
+                    s.getOrDefault(DataComponents.DAMAGE, 0),
+                    s.getOrDefault(DataComponents.REPAIR_COST, 0));
+            }
+        }
+
+        MerchantOffers offers = villager.getOffers();
+        List<Integer>         insertedIndices    = new ArrayList<>();
+        List<List<Integer>>   insertedSlotGroups = new ArrayList<>();
+        List<List<ItemStack>> insertedStackGroups = new ArrayList<>();
+
+        for (OfferGroup group : scan.groups) {
+            // Use the first stack in the group to build the offer (enchantments are the same)
+            MerchantOffer offer = tradeschool$buildTeachOffer(villager, group.firstStack, professionId, professionLevel);
+            if (offer == null) continue;
+
+            insertedIndices.add(offers.size());
+            offers.add(offer);
+            insertedSlotGroups.add(group.slots);
+            insertedStackGroups.add(group.stacks);
+        }
+
+        if (!insertedIndices.isEmpty()) {
+            tradeschool$teachOfferIndices    = insertedIndices;
+            tradeschool$teachItemSlotGroups  = insertedSlotGroups;
+            tradeschool$teachItemStackGroups = insertedStackGroups;
+            tradeschool$teachingPlayer       = sp.getUUID();
+        }
+    }
+
+    // ── slot scanning ────────────────────────────────────────────────────────
+
+    private static class OfferGroup {
+        final String sig;
+        final ItemStack firstStack;
+        final List<Integer> slots   = new ArrayList<>();
+        final List<ItemStack> stacks = new ArrayList<>();
+
+        OfferGroup(String sig, int slot, ItemStack stack) {
+            this.sig = sig;
+            this.firstStack = stack.copy();
+            slots.add(slot);
+            stacks.add(stack.copy());
+        }
+    }
+
+    private static class ScanResult {
+        final List<OfferGroup> groups = new ArrayList<>();
+    }
 
     /**
-     * Check for nearby teachable items every 20 ticks (1 second).
-     * Using intermediary name for tick method: method_5773
+     * Scans player slots in order: mainhand(36+hotbarSelected), offhand(40),
+     * armor (36=head, 37=chest, 38=legs, 39=feet), hotbar 0-8.
+     *
+     * Groups by enchantment-only signature (dedup identical-enchant swords with different damage).
+     * Records all slot indices per group so notifyTrade can identify which slot was consumed.
+     *
+     * Slot numbers follow Inventory internal layout:
+     *   0-8 = hotbar, 9-35 = main inventory, 36-39 = armor (head→feet), 40 = offhand.
      */
-    @Inject(method = "method_5773", at = @At("HEAD"), remap = false)
-    private void onTick(CallbackInfo ci) {
+    @Unique
+    private ScanResult tradeschool$scanAndGroup(ServerPlayer sp, String professionId, Villager villager) {
+        int villagerLevel = villager.getVillagerData().level();
+        Inventory inv = sp.getInventory();
+
+        // Build ordered (slotIndex, stack) pairs.
+        // Inventory slot layout: 0-8 = hotbar, 36-39 = armor (head→feet), 40 = offhand.
+        // We get selected hotbar slot via reflection on the Inventory field if needed,
+        // but can derive it as the hotbar slot whose item == sp.getMainHandItem().
+        int selectedHotbar = 0;
+        for (int i = 0; i <= 8; i++) {
+            if (inv.getItem(i) == sp.getMainHandItem()) { selectedHotbar = i; break; }
+        }
+
+        List<int[]> slotOrder = new ArrayList<>();
+        slotOrder.add(new int[]{selectedHotbar}); // mainhand
+        slotOrder.add(new int[]{40});              // offhand
+        slotOrder.add(new int[]{36});              // helmet
+        slotOrder.add(new int[]{37});              // chestplate
+        slotOrder.add(new int[]{38});              // leggings
+        slotOrder.add(new int[]{39});              // boots
+        for (int i = 0; i <= 8; i++) {
+            if (i != selectedHotbar) slotOrder.add(new int[]{i});
+        }
+
+        ScanResult result = new ScanResult();
+        Map<String, OfferGroup> seenSigs = new HashMap<>();
+        int totalItems = 0;
+
+        for (int[] si : slotOrder) {
+            if (totalItems >= MAX_TEACH_OFFERS) break;
+            int slotIdx = si[0];
+            ItemStack stack = inv.getItem(slotIdx);
+            if (stack.isEmpty()) continue;
+            if (EnchantedItemAnalyzer.isNetheriteForProfession(stack.getItem(), professionId)) continue;
+            if (!EnchantedItemAnalyzer.isTeachableForProfession(stack.getItem(), professionId)) continue;
+            if (stack.getItem() == Items.SHIELD && villagerLevel < 3) continue;
+
+            // Curse of Copyright check
+            ItemEnchantments enchs = stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+            boolean cursed = false;
+            for (Holder<Enchantment> e : enchs.keySet()) {
+                if (ModEnchantments.isCurseOfCopyright(e)) { cursed = true; break; }
+            }
+            if (cursed) continue;
+
+            String sig = tradeschool$enchantSignature(stack);
+            OfferGroup group = seenSigs.get(sig);
+            if (group == null) {
+                // New offer group
+                group = new OfferGroup(sig, slotIdx, stack);
+                seenSigs.put(sig, group);
+                result.groups.add(group);
+                totalItems++;
+            } else {
+                // Same enchantments, different damage — add to existing group
+                group.slots.add(slotIdx);
+                group.stacks.add(stack.copy());
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Signature for dedup: item type + sorted enchantments only (no damage/repair_cost).
+     * Two items with the same type and enchantments collapse to one offer regardless of damage.
+     */
+    @Unique
+    private String tradeschool$enchantSignature(ItemStack held) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(held.getItem()));
+        ItemEnchantments enchsRaw = held.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+        final ItemEnchantments enchs = enchsRaw.isEmpty()
+            ? held.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY) : enchsRaw;
+        enchs.keySet().stream()
+            .sorted(java.util.Comparator.comparing(h -> h.unwrapKey().map(r -> r.toString()).orElse("")))
+            .forEach(e -> sb.append("|").append(e.unwrapKey().map(r -> r.toString()).orElse("?"))
+                .append(":").append(enchs.getLevel(e)));
+        return sb.toString();
+    }
+
+    /**
+     * Builds one ephemeral teach offer for a given held item.
+     * Cost = the held item (with enchantment predicate, matches any damage).
+     * Result = the learned item (downtiered) if partial learn, or emeralds if full learn.
+     */
+    @Unique
+    private MerchantOffer tradeschool$buildTeachOffer(Villager villager, ItemStack held,
+                                                       String professionId, int professionLevel) {
+        if (held.isEmpty()) return null;
+
+        String label = getProfessionLabel(professionId);
+        var analysisResult = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label);
+        var knowledge = analysisResult.knowledge();
+
+        // Build the result stack — what the player receives after the teach trade
+        ItemStack resultStack;
+        boolean fullLearn = EnchantedItemAnalyzer.isFullLearn(held, knowledge);
+        if (fullLearn) {
+            int sellPrice = ItemPricingCalculator.calculateSellingPrice(knowledge);
+            int payment = Math.max(1, (sellPrice + 1) / 2);
+            resultStack = new ItemStack(Items.EMERALD, payment);
+        } else {
+            // Result built from groupFirst's knowledge. MerchantResultSlotMixin will overwrite
+            // damage/repair_cost at trade time to match whichever copy was actually submitted.
+            resultStack = knowledge.createItemStack();
+        }
+
+        // Build ItemCost with enchantment predicate so the UI shows the enchanted item.
+        // The predicate matches based on enchantments — it will accept any damage value of the item.
+        ItemCost cost;
+        if (professionId.contains("librarian")) {
+            ItemEnchantments storedEnchs = held.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+            net.minecraft.core.component.DataComponentExactPredicate pred = storedEnchs.isEmpty()
+                ? net.minecraft.core.component.DataComponentExactPredicate.EMPTY
+                : net.minecraft.core.component.DataComponentExactPredicate.expect(DataComponents.STORED_ENCHANTMENTS, storedEnchs);
+            cost = new ItemCost(held.typeHolder(), 1, pred);
+        } else {
+            ItemEnchantments enchs = held.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+            net.minecraft.core.component.DataComponentExactPredicate pred = enchs.isEmpty()
+                ? net.minecraft.core.component.DataComponentExactPredicate.EMPTY
+                : net.minecraft.core.component.DataComponentExactPredicate.expect(DataComponents.ENCHANTMENTS, enchs);
+            cost = new ItemCost(held.typeHolder(), 1, pred);
+        }
+
+        Constants.LOGGER.info("[TradeSchool] Teach offer: {} -> {} (fullLearn={})",
+            EnchantedItemAnalyzer.itemDisplayName(held.getItem()),
+            fullLearn ? resultStack.getCount() + " emeralds" : EnchantedItemAnalyzer.itemDisplayName(resultStack.getItem()),
+            fullLearn);
+
+        return new MerchantOffer(cost, resultStack, 1, 0, 0.0f);
+    }
+
+    // ── customServerAiStep — stare/preview ───────────────────────────────────
+
+    @Inject(method = "customServerAiStep", at = @At("RETURN"))
+    private void onCustomServerAiStep(ServerLevel level, CallbackInfo ci) {
         Villager villager = (Villager) (Object) this;
-
-        // Only run on server
-        if (villager.level().isClientSide()) {
-            return;
-        }
-
-        // Check if this is a Trade School profession
         String professionId = villager.getVillagerData().profession().toString();
-        if (!isTradeSchoolProfession(professionId)) {
-            return;
-        }
+        if (!isTradeSchoolProfession(professionId)) return;
 
-        // Check if villager leveled up - clear rejected items when they do
         int professionLevel = villager.getVillagerData().level();
         if (professionLevel != tradeschool$lastKnownLevel) {
-            tradeschool$rejectedItems.clear();
-            tradeschool$pendingPickups.clear();
+            tradeschool$notifiedHeldItems.clear();
             tradeschool$lastKnownLevel = professionLevel;
-            Constants.LOGGER.debug("Villager leveled up to {}, cleared rejected items cache", professionLevel);
         }
 
-        // Process pending pickups every tick
-        processPendingPickups(villager);
+        sendProximityHintIfNeeded(villager, professionId);
 
-        // Only check every 20 ticks (1 second) to reduce performance impact
-        if (tradeschool$pickupCheckCooldown > 0) {
-            tradeschool$pickupCheckCooldown--;
-            return;
-        }
-        tradeschool$pickupCheckCooldown = 20;
+        VillagerKnowledgeData kd = VillagerKnowledgeManager.getInstance().getOrCreateData(villager);
+        boolean alreadyLearned = kd.getItemKnowledgeAtLevel(professionLevel) != null;
 
-        // Check if villager already learned at current level
-        VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance()
-                .getOrCreateData(villager);
+        AABB box = villager.getBoundingBox().inflate(5.0);
+        List<ServerPlayer> nearby = level.getEntitiesOfClass(ServerPlayer.class, box, p -> true);
 
-        boolean alreadyLearned = professionId.contains("librarian")
-                ? knowledge.getKnowledgeAtLevel(professionLevel) != null
-                : knowledge.getItemKnowledgeAtLevel(professionLevel) != null;
+        Set<UUID> stillInterested = new HashSet<>();
+        for (ServerPlayer player : nearby) {
+            ItemStack previewItem = tradeschool$findFirstTeachableItem(player, professionId, villager);
+            if (previewItem == null || previewItem.isEmpty()) continue;
 
-        if (alreadyLearned) {
-            return; // Already learned at this level
-        }
-
-        // Search for nearby dropped items within 2 blocks
-        AABB searchBox = villager.getBoundingBox().inflate(2.0);
-        List<ItemEntity> nearbyItems = villager.level().getEntitiesOfClass(
-                ItemEntity.class,
-                searchBox,
-                item -> !item.isRemoved() && item.isAlive()
-        );
-
-        // Process the first valid teachable item found
-        for (ItemEntity itemEntity : nearbyItems) {
-            // Skip items we've already rejected
-            if (tradeschool$rejectedItems.contains(itemEntity.getUUID())) {
+            ItemEnchantments heldEnchs = previewItem.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+            boolean cursed = false;
+            for (Holder<Enchantment> e : heldEnchs.keySet()) {
+                if (ModEnchantments.isCurseOfCopyright(e)) { cursed = true; break; }
+            }
+            if (cursed) {
+                int curseHash = System.identityHashCode(previewItem.getItem()) ^ heldEnchs.hashCode() ^ "curse".hashCode();
+                if (tradeschool$notifiedHeldItems.getOrDefault(player.getUUID(), 0) != curseHash) {
+                    tradeschool$notifiedHeldItems.put(player.getUUID(), curseHash);
+                    sendCurseRejectionMessage(villager);
+                }
                 continue;
             }
 
-            // Skip items that are already pending pickup
-            if (tradeschool$pendingPickups.containsKey(itemEntity.getUUID())) {
-                continue;
-            }
+            if (alreadyLearned) continue;
 
-            if (tryValidateAndQueueItem(villager, itemEntity)) {
-                break; // Successfully validated and queued, stop checking
+            stillInterested.add(player.getUUID());
+
+            villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(player, true));
+            villager.getLookControl().setLookAt(player, 30f, 30f);
+            String label = getProfessionLabel(professionId);
+            ItemStack showItem = tradeschool$buildPreviewItem(previewItem, professionId, professionLevel, label);
+            villager.setItemSlot(EquipmentSlot.MAINHAND, showItem);
+            villager.setDropChance(EquipmentSlot.MAINHAND, 0.0f);
+
+            int heldHash = System.identityHashCode(previewItem.getItem()) ^ heldEnchs.hashCode();
+            if (tradeschool$notifiedHeldItems.getOrDefault(player.getUUID(), 0) == heldHash) continue;
+            tradeschool$notifiedHeldItems.put(player.getUUID(), heldHash);
+
+            String msg = tradeschool$buildPreviewMessage(villager, previewItem, professionId, label, kd, professionLevel);
+            if (msg != null) {
+                Constants.LOGGER.info(msg);
+                player.sendSystemMessage(Component.literal(msg));
+            }
+        }
+
+        tradeschool$notifiedHeldItems.keySet().retainAll(stillInterested);
+        if (stillInterested.isEmpty()) {
+            if (!villager.getMainHandItem().isEmpty()) {
+                villager.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             }
         }
     }
 
-    /**
-     * Processes pending pickups, ticking down timers and executing pickups when ready.
-     */
     @Unique
-    private void processPendingPickups(Villager villager) {
-        if (tradeschool$pendingPickups.isEmpty()) {
-            return;
+    private ItemStack tradeschool$findFirstTeachableItem(ServerPlayer sp, String professionId, Villager villager) {
+        int level = villager.getVillagerData().level();
+        Inventory inv = sp.getInventory();
+        List<ItemStack> scanOrder = new ArrayList<>();
+        scanOrder.add(sp.getMainHandItem());
+        scanOrder.add(sp.getOffhandItem());
+        scanOrder.add(sp.getItemBySlot(EquipmentSlot.HEAD));
+        scanOrder.add(sp.getItemBySlot(EquipmentSlot.CHEST));
+        scanOrder.add(sp.getItemBySlot(EquipmentSlot.LEGS));
+        scanOrder.add(sp.getItemBySlot(EquipmentSlot.FEET));
+        for (int i = 1; i <= 8; i++) scanOrder.add(inv.getItem(i));
+
+        for (ItemStack stack : scanOrder) {
+            if (stack.isEmpty()) continue;
+            if (EnchantedItemAnalyzer.isNetheriteForProfession(stack.getItem(), professionId)) continue;
+            if (!EnchantedItemAnalyzer.isTeachableForProfession(stack.getItem(), professionId)) continue;
+            if (stack.getItem() == Items.SHIELD && level < 3) continue;
+            return stack;
         }
-
-        // Use iterator to safely remove items while iterating
-        var iterator = tradeschool$pendingPickups.entrySet().iterator();
-        while (iterator.hasNext()) {
-            var entry = iterator.next();
-            PendingPickup pending = entry.getValue();
-
-            // Check if item entity is still valid
-            if (pending.itemEntity.isRemoved() || !pending.itemEntity.isAlive()) {
-                iterator.remove();
-                continue;
-            }
-
-            // Tick down
-            pending.ticksRemaining--;
-
-            if (pending.ticksRemaining <= 0) {
-                // Time to pick up
-                executePickup(villager, pending);
-                iterator.remove();
-            }
-        }
+        return ItemStack.EMPTY;
     }
 
-    /**
-     * Validates an item and queues it for delayed pickup if valid.
-     * Returns true if the item was queued, false otherwise.
-     */
     @Unique
-    private boolean tryValidateAndQueueItem(Villager villager, ItemEntity itemEntity) {
-        ItemStack stack = itemEntity.getItem();
-        String professionId = villager.getVillagerData().profession().toString();
+    private ItemStack tradeschool$buildPreviewItem(ItemStack held, String professionId, int professionLevel, String label) {
+        if (EnchantedItemAnalyzer.isNetheriteForProfession(held.getItem(), professionId)) {
+            return held.copyWithCount(1);
+        }
+        var result = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label);
+        return result.knowledge().createItemStack();
+    }
 
-        // Check if item is appropriate for teaching
-        boolean valid = false;
+    @Unique
+    private String tradeschool$buildPreviewMessage(Villager villager, ItemStack held, String professionId,
+                                                    String label, VillagerKnowledgeData knowledge, int professionLevel) {
+        if (EnchantedItemAnalyzer.isNetheriteForProfession(held.getItem(), professionId)) {
+            return "The " + label + " cannot learn how to craft Netherite as it's too rare.";
+        }
+        var result = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label);
+        int sellPrice = ItemPricingCalculator.calculateSellingPrice(result.knowledge());
+        int payment = Math.max(1, (sellPrice + 1) / 2);
 
-        if (professionId.contains("librarian") && stack.getItem() == Items.ENCHANTED_BOOK) {
-            valid = validateEnchantedBook(villager, itemEntity, stack);
-        } else if (EnchantedItemAnalyzer.isItemForProfession(stack.getItem(), professionId)) {
-            if (EnchantedItemAnalyzer.canTeachAtLevel(stack, villager.getVillagerData().level())) {
-                valid = validateEnchantedItem(villager, itemEntity, stack);
-            } else {
-                // Can't teach at this level - add to rejected list
-                tradeschool$rejectedItems.add(itemEntity.getUUID());
-            }
+        boolean fullLearn = EnchantedItemAnalyzer.isFullLearn(held, result.knowledge());
+        String learnDesc = result.learnMessage()
+            .replaceFirst("^The " + label + " has learned how to make a?n? ", "")
+            .replaceFirst(";.*$", "");
+        String heldName = EnchantedItemAnalyzer.itemDisplayName(held.getItem());
+
+        if (fullLearn) {
+            return "The " + label + " could learn how to make " + learnDesc
+                + " — right-click to trade your " + heldName + " for "
+                + payment + " emerald" + (payment == 1 ? "" : "s") + ".";
         } else {
-            // Not appropriate for this profession - add to rejected list
-            tradeschool$rejectedItems.add(itemEntity.getUUID());
-        }
-
-        return valid;
-    }
-
-    /**
-     * Executes the actual pickup after the delay has elapsed.
-     */
-    @Unique
-    private void executePickup(Villager villager, PendingPickup pending) {
-        // Consume the item
-        pending.itemEntity.discard();
-
-        // Teach the villager
-        if (pending.isBook) {
-            teachEnchantedBookNow(villager, pending.enchantment, pending.enchantmentLevel);
-        } else {
-            teachEnchantedItemNow(villager, pending.itemStack);
-        }
-
-        // Drop XP orbs
-        if (villager.level() instanceof ServerLevel serverLevel) {
-            int xpAmount = calculateXPReward(villager.getVillagerData().level());
-            ExperienceOrb.award(serverLevel, villager.position(), xpAmount);
-        }
-
-        // Visual and audio feedback
-        playTeachingEffects(villager);
-
-        // Grant advancement to nearby players
-        grantTeachingAdvancement(villager);
-
-        // Refresh villager trades
-        if (villager.level() instanceof ServerLevel serverLevel) {
-            ((VillagerTradesAccessor) villager).tradeschool$updateTrades(serverLevel);
+            return "The " + label + " could learn how to make " + learnDesc
+                + " — right-click to trade your " + heldName
+                + " (the item will be returned downgraded).";
         }
     }
 
-    /**
-     * Validates an enchanted book and queues it for pickup if valid.
-     */
-    @Unique
-    private boolean validateEnchantedBook(Villager villager, ItemEntity itemEntity, ItemStack book) {
-        // Extract enchantments from the book
-        ItemEnchantments enchantments = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS,
-                ItemEnchantments.EMPTY);
-        if (enchantments.isEmpty()) {
-            enchantments = book.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-        }
+    // ── messaging ─────────────────────────────────────────────────────────────
 
-        if (enchantments.isEmpty()) {
+    @Unique
+    private void sendCurseRejectionMessage(Villager villager) {
+        if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+        spawnAttentionParticles(villager, serverLevel, false);
+        String text = "The villager refuses to study copyrighted material!";
+        Constants.LOGGER.info(text);
+        Component msg = Component.literal(text);
+        serverLevel.getPlayers(player -> {
+            if (player instanceof ServerPlayer sp && sp.distanceToSqr(villager) <= 16 * 16)
+                sp.sendSystemMessage(msg);
             return false;
-        }
+        });
+    }
 
-        // Check for Curse of Copyright
-        for (Holder<Enchantment> enchantment : enchantments.keySet()) {
-            if (ModEnchantments.isCurseOfCopyright(enchantment)) {
-                Constants.LOGGER.info("Villager {} refused to learn copyrighted enchantment", villager.getUUID());
-                sendCurseRejectionMessage(villager);
-                return false;
+    @Unique
+    private void sendProximityHintIfNeeded(Villager villager, String professionId) {
+        if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+        String professionType = getProfessionType(professionId);
+        String hintText = getProfessionHint(professionType);
+        if (hintText == null) return;
+        serverLevel.getPlayers(player -> {
+            if (player instanceof ServerPlayer sp && sp.distanceToSqr(villager) <= 8 * 8) {
+                PlayerHintAccessor hints = (PlayerHintAccessor) sp;
+                if (!hints.tradeschool$hasSeenHint(professionType)) {
+                    hints.tradeschool$markHintSeen(professionType);
+                    spawnAttentionParticles(villager, serverLevel, true);
+                    Constants.LOGGER.info(hintText);
+                    sp.sendSystemMessage(Component.literal(hintText));
+                }
             }
-        }
-
-        // Get the first enchantment
-        Holder<Enchantment> learnedEnchantment = null;
-        int bookEnchantmentLevel = 1;
-        for (Holder<Enchantment> enchantment : enchantments.keySet()) {
-            learnedEnchantment = enchantment;
-            bookEnchantmentLevel = enchantments.getLevel(enchantment);
-            break;
-        }
-
-        if (learnedEnchantment == null) {
             return false;
-        }
-
-        // Check if villager already has a trade for this exact enchanted book
-        if (villagerAlreadyTradesIdenticalBook(villager, learnedEnchantment, bookEnchantmentLevel)) {
-            Constants.LOGGER.info("Villager {} already trades identical book for {}, skipping",
-                    villager.getUUID(),
-                    learnedEnchantment.unwrapKey().map(key -> key.toString()).orElse("unknown"));
-            return false;
-        }
-
-        // Queue the item for delayed pickup
-        int professionLevel = villager.getVillagerData().level();
-        int cappedLevel = Math.min(bookEnchantmentLevel, professionLevel);
-        tradeschool$pendingPickups.put(itemEntity.getUUID(),
-                new PendingPickup(itemEntity, book, learnedEnchantment, cappedLevel, 30));
-
-        Constants.LOGGER.debug("Villager {} queued enchanted book for pickup: {} level {}",
-                villager.getUUID(),
-                learnedEnchantment.unwrapKey().map(key -> key.toString()).orElse("unknown"),
-                cappedLevel);
-
-        return true;
+        });
     }
 
-    /**
-     * Actually teaches a villager from an enchanted book after validation.
-     */
     @Unique
-    private void teachEnchantedBookNow(Villager villager, Holder<Enchantment> enchantment, int enchantmentLevel) {
-        int professionLevel = villager.getVillagerData().level();
-
-        VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance()
-                .getOrCreateData(villager);
-
-        knowledge.teachEnchantment(professionLevel, enchantment, enchantmentLevel);
-        VillagerKnowledgeManager.getInstance().saveData(villager, knowledge);
-
-        Constants.LOGGER.info("Villager {} learned enchantment {} level {} via pickup",
-                villager.getUUID(),
-                enchantment.unwrapKey().map(key -> key.toString()).orElse("unknown"),
-                enchantmentLevel);
+    private void spawnAttentionParticles(Villager villager, ServerLevel level, boolean positive) {
+        var particle = positive ? ParticleTypes.HAPPY_VILLAGER : ParticleTypes.ANGRY_VILLAGER;
+        double cx = villager.getX(), cy = villager.getY() + villager.getBbHeight() + 0.3, cz = villager.getZ();
+        for (int i = 0; i < 12; i++) {
+            double ox = (villager.getRandom().nextDouble() - 0.5) * 0.6;
+            double oy = villager.getRandom().nextDouble() * 0.8;
+            double oz = (villager.getRandom().nextDouble() - 0.5) * 0.6;
+            level.sendParticles(particle, cx + ox, cy + oy, cz + oz, 1, 0, 0.05, 0, 0);
+        }
     }
 
-    /**
-     * Validates an enchanted item and queues it for pickup if valid.
-     */
+    // ── string helpers ────────────────────────────────────────────────────────
+
     @Unique
-    private boolean validateEnchantedItem(Villager villager, ItemEntity itemEntity, ItemStack item) {
-        int professionLevel = villager.getVillagerData().level();
-        String professionId = villager.getVillagerData().profession().toString();
-
-        // Validate item is appropriate for profession
-        if (!EnchantedItemAnalyzer.isItemForProfession(item.getItem(), professionId)) {
-            return false;
-        }
-
-        // Validate material tier and enchantment requirements
-        if (!EnchantedItemAnalyzer.canTeachAtLevel(item, professionLevel)) {
-            return false;
-        }
-
-        // Check for Curse of Copyright on the item
-        ItemEnchantments enchantments = item.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-        for (Holder<Enchantment> enchantment : enchantments.keySet()) {
-            if (ModEnchantments.isCurseOfCopyright(enchantment)) {
-                Constants.LOGGER.info("Villager {} refused to learn copyrighted item {}", villager.getUUID(), item.getItem());
-                sendCurseRejectionMessage(villager);
-                return false;
-            }
-        }
-
-        // Check if villager already has a trade for this exact item (with same enchantments/properties)
-        if (villagerAlreadyTradesIdenticalItem(villager, item)) {
-            Constants.LOGGER.info("Villager {} already trades identical item {}, skipping",
-                    villager.getUUID(),
-                    item.getItem());
-            return false;
-        }
-
-        // If villager has a trade for a basic version of this item, check if this one is enhanced
-        if (villagerTradesBasicVersionOfItem(villager, item)) {
-            // This is fine - the enhanced version will replace the basic trade
-            Constants.LOGGER.info("Villager {} has basic trade for {}, will replace with enhanced version",
-                    villager.getUUID(),
-                    item.getItem());
-        }
-
-        // Queue the item for delayed pickup
-        tradeschool$pendingPickups.put(itemEntity.getUUID(),
-                new PendingPickup(itemEntity, item, 30));
-
-        Constants.LOGGER.debug("Villager {} queued item for pickup: {}",
-                villager.getUUID(),
-                item.getItem());
-
-        return true;
+    private String getProfessionLabel(String professionId) {
+        if (professionId.contains("librarian"))   return "librarian";
+        if (professionId.contains("weaponsmith")) return "weaponsmith";
+        if (professionId.contains("toolsmith"))   return "toolsmith";
+        if (professionId.contains("armorer"))     return "armorer";
+        if (professionId.contains("fletcher"))    return "fletcher";
+        return "villager";
     }
 
-    /**
-     * Actually teaches a villager from an enchanted item after validation.
-     */
     @Unique
-    private void teachEnchantedItemNow(Villager villager, ItemStack item) {
-        int professionLevel = villager.getVillagerData().level();
-
-        VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance()
-                .getOrCreateData(villager);
-
-        // Analyze item and cap enchantment levels by villager level
-        ItemKnowledge itemKnowledge = EnchantedItemAnalyzer.analyzeItem(item, professionLevel);
-
-        knowledge.teachItem(professionLevel, itemKnowledge);
-        VillagerKnowledgeManager.getInstance().saveData(villager, knowledge);
-
-        Constants.LOGGER.info("Villager {} learned item {} at level {} with {} enchantments via pickup",
-                villager.getUUID(),
-                item.getItem(),
-                professionLevel,
-                itemKnowledge.getEnchantments().size());
+    private String getProfessionType(String professionId) {
+        if (professionId.contains("librarian"))   return "librarian";
+        if (professionId.contains("weaponsmith")) return "weaponsmith";
+        if (professionId.contains("toolsmith"))   return "toolsmith";
+        if (professionId.contains("armorer"))     return "armorer";
+        if (professionId.contains("fletcher"))    return "fletcher";
+        return null;
     }
 
-    /**
-     * Checks if the villager already has a trade for an identical enchanted book.
-     */
     @Unique
-    private boolean villagerAlreadyTradesIdenticalBook(Villager villager, Holder<Enchantment> enchantment, int level) {
-        for (net.minecraft.world.item.trading.MerchantOffer offer : villager.getOffers()) {
-            ItemStack offered = offer.getResult();
-
-            // Check if it's an enchanted book
-            if (offered.getItem() != Items.ENCHANTED_BOOK) {
-                continue;
-            }
-
-            // Check stored enchantments
-            ItemEnchantments offeredEnch = offered.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-
-            // Check if this book has the same enchantment at the same level
-            if (offeredEnch.getLevel(enchantment) == level) {
-                return true; // Villager already trades this exact book
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if the villager already has a trade for an identical item (same enchantments, trim, etc.).
-     */
-    @Unique
-    private boolean villagerAlreadyTradesIdenticalItem(Villager villager, ItemStack newItem) {
-        for (net.minecraft.world.item.trading.MerchantOffer offer : villager.getOffers()) {
-            ItemStack offered = offer.getResult();
-
-            // Check if base item matches
-            if (offered.getItem() != newItem.getItem()) {
-                continue;
-            }
-
-            // Check if enchantments match
-            ItemEnchantments offeredEnch = offered.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-            ItemEnchantments newEnch = newItem.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-
-            if (!enchantsMatch(offeredEnch, newEnch)) {
-                continue;
-            }
-
-            // Check if trim matches (if applicable)
-            boolean offeredHasTrim = offered.has(DataComponents.TRIM);
-            boolean newHasTrim = newItem.has(DataComponents.TRIM);
-
-            if (offeredHasTrim != newHasTrim) {
-                continue;
-            }
-
-            if (offeredHasTrim && !offered.get(DataComponents.TRIM).equals(newItem.get(DataComponents.TRIM))) {
-                continue;
-            }
-
-            // Items are identical
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if the villager trades a basic (unenchanted, no trim) version of this item.
-     */
-    @Unique
-    private boolean villagerTradesBasicVersionOfItem(Villager villager, ItemStack newItem) {
-        // Only consider this if the new item is enhanced (has enchantments or trim)
-        ItemEnchantments newEnch = newItem.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-        boolean hasEnchantments = !newEnch.isEmpty();
-        boolean hasTrim = newItem.has(DataComponents.TRIM);
-
-        if (!hasEnchantments && !hasTrim) {
-            return false; // New item is also basic, not an upgrade
-        }
-
-        // Check if villager has a basic version of this item
-        for (net.minecraft.world.item.trading.MerchantOffer offer : villager.getOffers()) {
-            ItemStack offered = offer.getResult();
-
-            // Check if base item matches
-            if (offered.getItem() != newItem.getItem()) {
-                continue;
-            }
-
-            // Check if offered item is basic (no enchantments, no trim)
-            ItemEnchantments offeredEnch = offered.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
-            boolean offeredBasic = offeredEnch.isEmpty() && !offered.has(DataComponents.TRIM);
-
-            if (offeredBasic) {
-                return true; // Villager has a basic version, new item can replace it
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Helper to check if two enchantment sets match.
-     */
-    @Unique
-    private boolean enchantsMatch(ItemEnchantments e1, ItemEnchantments e2) {
-        if (e1.isEmpty() && e2.isEmpty()) {
-            return true;
-        }
-        if (e1.size() != e2.size()) {
-            return false;
-        }
-
-        for (Holder<Enchantment> ench : e1.keySet()) {
-            if (e1.getLevel(ench) != e2.getLevel(ench)) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Calculates XP reward based on villager profession level.
-     */
-    @Unique
-    private int calculateXPReward(int professionLevel) {
-        return switch (professionLevel) {
-            case 1 -> 3;  // Novice: 3 XP
-            case 2 -> 5;  // Apprentice: 5 XP
-            case 3 -> 10; // Journeyman: 10 XP
-            case 4 -> 15; // Expert: 15 XP
-            case 5 -> 20; // Master: 20 XP
-            default -> 5;
+    private String getProfessionHint(String professionType) {
+        if (professionType == null) return null;
+        return switch (professionType) {
+            case "librarian"   -> "This villager is eager to learn. Right-click holding an enchanted book and they will study it and begin selling that enchantment.";
+            case "weaponsmith" -> "This villager is eager to learn. Right-click holding an enchanted sword or axe and they will learn to craft and sell it.";
+            case "toolsmith"   -> "This villager is eager to learn. Right-click holding an enchanted pickaxe, shovel, or hoe and they will learn to craft and sell it.";
+            case "armorer"     -> "This villager is eager to learn. Right-click holding a piece of armor or shield and they will learn to craft and sell it.";
+            case "fletcher"    -> "This villager is eager to learn. Right-click holding an enchanted bow, crossbow, or tipped arrow and they will learn to sell it.";
+            default -> null;
         };
     }
 
-    /**
-     * Plays visual and audio effects when a villager learns.
-     */
-    @Unique
-    private void playTeachingEffects(Villager villager) {
-        if (!(villager.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        // Green particle effects (happy villager particles)
-        for (int i = 0; i < 20; i++) {
-            double offsetX = (villager.getRandom().nextDouble() - 0.5) * 0.5;
-            double offsetY = villager.getRandom().nextDouble() * 1.5;
-            double offsetZ = (villager.getRandom().nextDouble() - 0.5) * 0.5;
-
-            serverLevel.sendParticles(
-                    ParticleTypes.HAPPY_VILLAGER,
-                    villager.getX() + offsetX,
-                    villager.getY() + offsetY,
-                    villager.getZ() + offsetZ,
-                    1,
-                    0.0, 0.1, 0.0,
-                    0.0
-            );
-        }
-
-        // Play villager "yes" sound
-        serverLevel.playSound(
-                null,
-                villager.blockPosition(),
-                SoundEvents.VILLAGER_YES,
-                SoundSource.NEUTRAL,
-                1.0F,
-                1.0F
-        );
-
-        // Play level up sound
-        serverLevel.playSound(
-                null,
-                villager.blockPosition(),
-                SoundEvents.PLAYER_LEVELUP,
-                SoundSource.NEUTRAL,
-                0.5F,
-                1.5F
-        );
-    }
-
-    /**
-     * Grants the "Teach a Villager" advancement to nearby players.
-     */
-    @Unique
-    private void grantTeachingAdvancement(Villager villager) {
-        if (!(villager.level() instanceof ServerLevel serverLevel)) {
-            Constants.LOGGER.debug("Not server level, skipping advancement grant");
-            return;
-        }
-
-        Constants.LOGGER.info("Attempting to grant teaching advancement to nearby players");
-
-        // Find nearby players within 16 blocks
-        serverLevel.getPlayers(player -> {
-            if (player instanceof ServerPlayer serverPlayer) {
-                double distance = serverPlayer.distanceToSqr(villager);
-                Constants.LOGGER.debug("Found player {} at distance {}", serverPlayer.getName().getString(), Math.sqrt(distance));
-
-                if (distance <= 16 * 16) {
-                    // Grant advancement
-                    try {
-                        net.minecraft.resources.Identifier advancementId =
-                            net.minecraft.resources.Identifier.fromNamespaceAndPath(Constants.MOD_ID, "teach_villager");
-
-                        Constants.LOGGER.info("Looking for advancement: {}", advancementId);
-
-                        // Debug: List all advancements to see what's available
-                        var allAdvancements = serverLevel.getServer().getAdvancements().getAllAdvancements();
-                        Constants.LOGGER.info("Total advancements in registry: {}", allAdvancements.size());
-
-                        // Check if any tradeschool advancements exist
-                        long tradeschoolCount = allAdvancements.stream()
-                            .filter(a -> a.id().getNamespace().equals(Constants.MOD_ID))
-                            .count();
-                        Constants.LOGGER.info("Tradeschool advancements found: {}", tradeschoolCount);
-
-                        if (tradeschoolCount > 0) {
-                            Constants.LOGGER.info("Available tradeschool advancements:");
-                            allAdvancements.stream()
-                                .filter(a -> a.id().getNamespace().equals(Constants.MOD_ID))
-                                .forEach(a -> Constants.LOGGER.info("  - {}", a.id()));
-                        }
-
-                        net.minecraft.advancements.AdvancementHolder advancement =
-                            serverLevel.getServer().getAdvancements().get(advancementId);
-
-                        if (advancement != null) {
-                            Constants.LOGGER.info("Granting advancement {} to player {}", advancementId, serverPlayer.getName().getString());
-                            serverPlayer.getAdvancements().award(advancement, "taught_villager");
-                            Constants.LOGGER.info("Advancement granted successfully");
-                        } else {
-                            Constants.LOGGER.warn("Advancement {} not found in registry!", advancementId);
-                        }
-                    } catch (Exception e) {
-                        Constants.LOGGER.error("Failed to grant teaching advancement", e);
-                    }
-                }
-            }
-            return false; // Don't collect, just iterate
-        });
-    }
-
-    /**
-     * Sends a rejection message to nearby players when a villager refuses cursed material.
-     */
-    @Unique
-    private void sendCurseRejectionMessage(Villager villager) {
-        if (!(villager.level() instanceof ServerLevel serverLevel)) {
-            return;
-        }
-
-        Component message = Component.translatable("tradeschool.teaching.curse_rejected");
-
-        // Send to all players within 16 blocks
-        serverLevel.getPlayers(player -> {
-            if (player instanceof ServerPlayer serverPlayer) {
-                double distance = serverPlayer.distanceToSqr(villager);
-                if (distance <= 16 * 16) {
-                    serverPlayer.sendSystemMessage(message);
-                }
-            }
-            return false; // Don't collect, just iterate
-        });
-    }
-
-    /**
-     * Checks if a profession is supported by Trade School.
-     */
     @Unique
     private boolean isTradeSchoolProfession(String profession) {
         return profession.contains("librarian") ||

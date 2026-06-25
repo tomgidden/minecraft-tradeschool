@@ -9,7 +9,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.ItemCost;
@@ -23,7 +22,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * For Weaponsmiths, Toolsmiths, Armourers, and Fletchers.
  */
-public class ItemTeachingTradeFactory implements VillagerTrades.ItemListing {
+public class ItemTeachingTradeFactory {
 
     private final int professionLevel; // Current villager profession level
     private final String professionId; // e.g., "minecraft:weaponsmith"
@@ -33,7 +32,6 @@ public class ItemTeachingTradeFactory implements VillagerTrades.ItemListing {
         this.professionId = professionId;
     }
 
-    @Override
     @Nullable
     public MerchantOffer getOffer(ServerLevel level, Entity trader, RandomSource random) {
         if (!(trader instanceof Villager villager)) {
@@ -43,8 +41,9 @@ public class ItemTeachingTradeFactory implements VillagerTrades.ItemListing {
         VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance()
                 .getOrCreateData(villager);
 
-        // Check if villager already learned an item at this level
-        if (knowledge.getItemKnowledgeAtLevel(professionLevel) != null) {
+        // Check if villager already learned an item at this level for their current profession
+        String prof = villager.getVillagerData().profession().toString();
+        if (knowledge.getItemKnowledgeAtLevel(prof, professionLevel) != null) {
             return null; // Already learned one at this level
         }
 
@@ -88,12 +87,10 @@ public class ItemTeachingTradeFactory implements VillagerTrades.ItemListing {
             return false;
         }
 
-        // Validate material tier and enchantment requirements
-        // Diamond requires Expert+, Netherite requires Master
-        // Max-level-1 enchantments (Silk Touch, Mending) require at least Journeyman (level 3)
-        if (!EnchantedItemAnalyzer.canTeachAtLevel(tradedItem, professionLevel)) {
-            Constants.LOGGER.warn("Item teaching trade rejected - {} requires higher level than {}",
-                    tradedItem.getItem(), professionLevel);
+        // Validate item is teachable for this profession
+        if (!EnchantedItemAnalyzer.isTeachableForProfession(tradedItem.getItem(), professionId)) {
+            Constants.LOGGER.warn("Item teaching trade rejected - {} not teachable for {}",
+                    tradedItem.getItem(), professionId);
             return false;
         }
 
@@ -104,7 +101,7 @@ public class ItemTeachingTradeFactory implements VillagerTrades.ItemListing {
         VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance()
                 .getOrCreateData(villager);
 
-        if (knowledge.teachItem(professionLevel, itemKnowledge)) {
+        if (knowledge.teachItem(professionId, professionLevel, itemKnowledge)) {
             VillagerKnowledgeManager.getInstance().saveData(villager, knowledge);
 
             Constants.LOGGER.info("Villager {} learned item {} at level {} with {} enchantments",

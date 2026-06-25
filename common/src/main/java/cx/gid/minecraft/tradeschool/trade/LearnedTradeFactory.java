@@ -8,7 +8,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.npc.villager.VillagerTrades;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.enchantment.Enchantment;
@@ -23,7 +22,7 @@ import java.util.Random;
  * Creates trades where librarians sell enchanted books they've learned.
  * Enchantment level is fixed at the level that was stored when the villager learned it.
  */
-public class LearnedTradeFactory implements VillagerTrades.ItemListing {
+public class LearnedTradeFactory {
 
     private final EnchantmentKnowledge enchantmentKnowledge;
 
@@ -31,7 +30,6 @@ public class LearnedTradeFactory implements VillagerTrades.ItemListing {
         this.enchantmentKnowledge = enchantmentKnowledge;
     }
 
-    @Override
     @Nullable
     public MerchantOffer getOffer(ServerLevel level, Entity trader, RandomSource random) {
         if (!(trader instanceof Villager villager)) {
@@ -62,6 +60,13 @@ public class LearnedTradeFactory implements VillagerTrades.ItemListing {
                 5,                                          // Villager XP gained
                 0.05F                                       // Price multiplier
         );
+    }
+
+    /** Public estimate used to compute the emerald payment when a book is picked up. */
+    public static int estimateBookPrice(Holder<Enchantment> enchantment, int level) {
+        int maxCost = enchantment.value().getMaxCost(level);
+        int baseCost = maxCost <= 20 ? 5 : maxCost <= 30 ? 10 : maxCost <= 40 ? 15 : 20;
+        return Math.max(5, Math.min(64, baseCost + (level - 1) * 5));
     }
 
     /**

@@ -3,7 +3,7 @@
   "id": "${mod_id}",
   "version": "${version}",
   "name": "${mod_name}",
-    "description": "Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items - they'll learn and resell what you teach! Pre-alpha development build.",
+  "description": "Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items - they'll learn and resell what you teach! Pre-alpha development build.",
   "authors": [
     "_gid"
   ],
@@ -13,23 +13,19 @@
   },
   "license": "MIT",
   "icon": "assets/tradeschool/icon.png",
-  "environment": "*",
+  "environment": "server",
   "entrypoints": {
     "main": [
       "cx.gid.minecraft.tradeschool.fabric.TradeSchoolFabric"
     ]
   },
   "mixins": [
-    "tradeschool.mixins.json",
-    "tradeschool-fabric.mixins.json"
+    "tradeschool.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=${loader_version}",
+    "fabricloader": ">=${fabric_loader_version}",
     "fabric-api": "*",
-    "minecraft": "~${minecraft_version}",
-    "java": ">=21"
-  },
-  "recommends": {
-    "architectury": ">=${architectury_version}"
+    "minecraft": ">=26.1.2 <27",
+    "java": ">=25"
   }
 }

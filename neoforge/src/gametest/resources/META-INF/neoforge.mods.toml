@@ -1,0 +1,22 @@
+modLoader = "javafml"
+loaderVersion = "[4,)"
+license = "MIT"
+
+[[mods]]
+modId = "tradeschool_gametest"
+version = "1.0.0"
+displayName = "Trade School Game Tests"
+
+[[dependencies.tradeschool_gametest]]
+modId = "tradeschool"
+type = "required"
+versionRange = "[0,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[dependencies.tradeschool_gametest]]
+modId = "neoforge"
+type = "required"
+versionRange = "[0,)"
+ordering = "NONE"
+side = "BOTH"
