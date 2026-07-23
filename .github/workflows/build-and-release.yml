@@ -1,0 +1,86 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - '[0-9]*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # This branch is the final 1.21.11 build: Architectury Loom on Gradle
+      # 8.11, which cannot compile buildscripts under a JDK newer than 23.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'zulu'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # Loom's cache is expensive to rebuild but only changes when the pinned
+      # MC/loader versions do -- not on every source change -- so it is cached
+      # separately from setup-gradle's build-cache, keyed on gradle.properties.
+      - name: Cache Loom toolchain
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches/fabric-loom
+            .gradle/loom-cache
+          key: toolchains-${{ runner.os }}-${{ hashFiles('gradle.properties') }}
+          restore-keys: |
+            toolchains-${{ runner.os }}-
+
+      # Only :fabric is released. Building it still compiles :common (the
+      # Fabric jar embeds common's classes directly), but avoids publishing
+      # common's own jars, which nothing consumes.
+      - name: Build
+        run: ./gradlew :fabric:build
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Trade School ${{ github.ref_name }}
+          body: |
+            **Minecraft 1.21.11 | Fabric**
+
+            Final release for Minecraft 1.21.x. Development continues on `main`, targeting Minecraft 26 only.
+
+            Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items — they'll learn and resell what you teach!
+
+            Requires [Fabric API](https://modrinth.com/mod/fabric-api) and [Architectury API](https://modrinth.com/mod/architectury-api).
+          files: |
+            fabric/build/libs/tradeschool-fabric-${{ github.ref_name }}.jar
+          fail_on_unmatched_files: true
+
+      # Loaders, game versions and dependencies are read out of the jar's own
+      # fabric.mod.json, so there is nothing to keep in step here.
+      #
+      # Skipped unless MODRINTH_TOKEN is set, so a fork or a local
+      # workflow_dispatch still builds and makes a GitHub release.
+      - name: Publish to Modrinth
+        if: ${{ env.MODRINTH_TOKEN != '' }}
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          modrinth-id: ${{ vars.MODRINTH_ID }}
+          modrinth-token: ${{ env.MODRINTH_TOKEN }}
+          files: |
+            fabric/build/libs/tradeschool-fabric-${{ github.ref_name }}.jar
+          name: Trade School ${{ github.ref_name }}
+          version: ${{ github.ref_name }}
+          version-type: release
+          changelog: |
+            Final release for Minecraft 1.21.x. Development continues on `main`, targeting Minecraft 26 only.
+
+            See https://github.com/tomgidden/minecraft-tradeschool/releases/tag/${{ github.ref_name }}

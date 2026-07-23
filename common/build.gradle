@@ -2,6 +2,10 @@ architectury {
     common("fabric")
 }
 
+base {
+    archivesName = "${rootProject.archives_base_name}-common"
+}
+
 loom {
     accessWidenerPath = file("src/main/resources/tradeschool.accesswidener")
 }
