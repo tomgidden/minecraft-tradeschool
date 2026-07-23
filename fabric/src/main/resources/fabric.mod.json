@@ -13,7 +13,6 @@
   },
   "license": "MIT",
   "icon": "assets/tradeschool/icon.png",
-  "environment": "server",
   "entrypoints": {
     "main": [
       "cx.gid.minecraft.tradeschool.fabric.TradeSchoolFabric"
