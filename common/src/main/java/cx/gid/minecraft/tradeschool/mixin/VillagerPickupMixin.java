@@ -55,16 +55,11 @@ public abstract class VillagerPickupMixin {
 
     /**
      * Check for nearby teachable items every 20 ticks (1 second).
-     * Using intermediary name for tick method: method_5773
+     * customServerAiStep only runs server-side, so no client guard is needed.
      */
-    @Inject(method = "method_5773", at = @At("HEAD"), remap = false)
-    private void onTick(CallbackInfo ci) {
+    @Inject(method = "customServerAiStep", at = @At("HEAD"))
+    private void onTick(ServerLevel level, CallbackInfo ci) {
         Villager villager = (Villager) (Object) this;
-
-        // Only run on server
-        if (villager.level().isClientSide()) {
-            return;
-        }
 
         // Check if this is a Trade School profession
         String professionId = villager.getVillagerData().profession().toString();

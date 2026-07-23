@@ -30,24 +30,19 @@ public abstract class VillagerEntityMixin implements VillagerEntityAccessor {
         this.tradeschool$persistentData = data;
     }
 
-    // TODO: Fix persistence in 1.21.11 - ValueOutput/ValueInput API changed
-    // For now, data won't persist across restarts but will work within a session
-
-    /*
     @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
     private void onSave(ValueOutput output, CallbackInfo ci) {
-        CompoundTag persistentData = this.tradeschool$persistentData;
-        if (persistentData != null && !persistentData.isEmpty()) {
-            output.put("TradeSchool", persistentData);
+        if (!this.tradeschool$persistentData.isEmpty()) {
+            output.store("TradeSchool", CompoundTag.CODEC, this.tradeschool$persistentData);
         }
     }
 
     @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
     private void onLoad(ValueInput input, CallbackInfo ci) {
-        CompoundTag loadedData = input.getCompound("TradeSchool").orElse(new CompoundTag());
-        if (!loadedData.isEmpty()) {
-            this.tradeschool$persistentData = loadedData;
-        }
+        input.read("TradeSchool", CompoundTag.CODEC).ifPresent(data -> {
+            if (!data.isEmpty()) {
+                this.tradeschool$persistentData = data;
+            }
+        });
     }
-    */
 }

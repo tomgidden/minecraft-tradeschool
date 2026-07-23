@@ -77,7 +77,6 @@ jobs:
           # Files to Upload
           files: |
             fabric/build/libs/!(*-dev|*-sources).jar
-            fabric/build/libs/*-sources.jar
 
           # Version Information
           name: "TradeSchool ${{ github.ref_name }}"
