@@ -178,8 +178,11 @@ this stage, as I've little experience writing Minecraft mods.
 This mod is covered by the [MIT License](LICENSE.txt).
 
 In short, you may freely use this mod in any modpack, but just don't claim you
-made it. No promises, no warranties, so don't blame me if it breaks anything or
-disadvantages you in some way, or you believe it did.
+made the mod and then sue me for copyright!
+
+The idea's public-domain, and I'm sure others have come up with the same. No 
+promises, no warranties, so don't blame me if it breaks anything or disadvantages
+you in some way, or you believe it did.
 
 [Comments and improvements welcome.](https://github.com/tomgidden/minecraft-tradeschool)
 
