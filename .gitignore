@@ -1,38 +1,30 @@
-# Gradle
-.gradle/
-build/
-out/
-gradle-app.setting
-.gradletasknamecache
-
-# IntelliJ IDEA
-.idea/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.iml
 *.ipr
 *.iws
-*.iml
-
-# VS Code
-.vscode/
-
-# Eclipse
+*.log
+*/.gradle/
+*/bin/
+*/build/
+.DS_Store
 .classpath
+.gradle/
+.gradletasknamecache
+.idea/
+.loom-cache/
 .project
 .settings/
+.vscode/
 bin/
-
-# macOS
-.DS_Store
-
-# Java
-*.class
-*.log
-
-# Minecraft / Modding
+build/
+dev/
+gradle-app.setting
+net/
+out/
+run-*/
 run/
 runs/
-run-*/
-dev/
-net/
-
-# Gradle wrapper jar is committed intentionally
-!gradle/wrapper/gradle-wrapper.jar
+tests/__pycache__
+tests/config.py
+*/.eclipse

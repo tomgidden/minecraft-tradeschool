@@ -1,3 +1,17 @@
+# This workflow is intentionally identical across all of tomgidden's Minecraft
+# mods. Everything that differs between mods lives in .github/release/:
+#
+#   release.env   -- mod name, jar basename, release channel, project ids
+#   RELEASE.md    -- body of the GitHub release
+#   CHANGELOG.md  -- changelog sent to Modrinth and CurseForge
+#
+# ...or is discovered from the repo layout itself: which loaders get built is
+# decided by which of the fabric/ and neoforge/ subprojects are present, so a
+# Fabric-only mod and a Fabric+NeoForge mod share this file unchanged.
+#
+# To change what a release says, edit those files -- not this one. Any edit
+# here should be copied to the other repos so they stay in sync.
+
 name: Build and Release
 
 on:
@@ -13,6 +27,7 @@ jobs:
       contents: write
     env:
       MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
+      CURSEFORGE_TOKEN: ${{ secrets.CURSEFORGE_TOKEN }}
 
     steps:
       - name: Checkout
@@ -31,7 +46,8 @@ jobs:
       # Loom's own cache are expensive to rebuild but only change when the
       # pinned MC/loader/NeoForge versions do -- not on every source change --
       # so they're cached separately from setup-gradle's build-cache, keyed on
-      # gradle.properties rather than the whole repo.
+      # gradle.properties rather than the whole repo. The neoformruntime path
+      # is simply unused in repos with no neoforge/ subproject.
       - name: Cache NeoForge/Loom toolchains
         uses: actions/cache@v4
         with:
@@ -43,39 +59,68 @@ jobs:
           restore-keys: |
             toolchains-${{ runner.os }}-
 
+      # release.env is plain KEY=value, so it can be appended straight to the
+      # step environment. VERSION comes from the tag; on a workflow_dispatch
+      # (no tag) it falls back to mod_version out of gradle.properties, so a
+      # manual run still builds and names its artifacts correctly.
+      #
+      # The set of loaders is derived from the repo layout: a loader is built
+      # only if its subproject directory exists. GRADLE_TARGETS is the list of
+      # build tasks; HAS_FABRIC/HAS_NEOFORGE gate the later per-loader steps.
+      - name: Load release config
+        id: cfg
+        run: |
+          cat .github/release/release.env >> "$GITHUB_ENV"
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "VERSION=${{ github.ref_name }}" >> "$GITHUB_ENV"
+          else
+            echo "VERSION=$(sed -n 's/^mod_version=//p' gradle.properties)" >> "$GITHUB_ENV"
+          fi
+
+          targets=""
+          for loader in fabric neoforge; do
+            if [ -d "$loader" ]; then
+              targets="$targets :$loader:build"
+              echo "HAS_$(echo "$loader" | tr '[:lower:]' '[:upper:]')=true" >> "$GITHUB_ENV"
+            fi
+          done
+          if [ -z "$targets" ]; then
+            echo "::error::No fabric/ or neoforge/ subproject found -- nothing to build."
+            exit 1
+          fi
+          echo "GRADLE_TARGETS=${targets# }" >> "$GITHUB_ENV"
+
       - name: Build
-        run: ./gradlew :fabric:build :neoforge:build
+        run: ./gradlew $GRADLE_TARGETS
+
+      # The release body and changelog are templates containing ${VERSION};
+      # envsubst is restricted to that one variable so any other $... in the
+      # prose (or a stray backtick-free shell-looking string) is left alone.
+      #
+      # RELEASE_FILES is the newline-separated list of jars to attach/publish,
+      # holding only the loaders that were actually built.
+      - name: Render release text
+        run: |
+          envsubst '${VERSION}' < .github/release/RELEASE.md > "$RUNNER_TEMP/release-body.md"
+          envsubst '${VERSION}' < .github/release/CHANGELOG.md > "$RUNNER_TEMP/changelog.md"
+
+          {
+            echo "RELEASE_FILES<<EOF"
+            for loader in fabric neoforge; do
+              jar="$loader/build/libs/${ARTIFACT}-${loader}-${VERSION}.jar"
+              [ -f "$jar" ] && echo "$jar"
+            done
+            echo "EOF"
+          } >> "$GITHUB_ENV"
 
       - name: Create release
         uses: softprops/action-gh-release@v2
         with:
-          name: Trade School ${{ github.ref_name }}
-          body: |
-            **Minecraft 26.x | Fabric and NeoForge**
-
-            Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items — they'll learn and resell what you teach!
-
-            Install one of these to your server's `mods/` folder (or run Open To LAN on a singleplayer world)
-
-            - `tradeschool-fabric-${{ github.ref_name }}.jar` — Fabric (requires Fabric API)
-            - `tradeschool-neoforge-${{ github.ref_name }}.jar` — NeoForge
-
-            The Fabric version requires [Fabric API](https://modrinth.com/mod/fabric-api).
-
-            TL;DR:
-
-            1. Find a decent enchanted book, enchanted weapon, armour, or even just make a basic pickaxe;
-            2. Hold it and right-click a suitable Villager (eg. Weaponsmith, Librarian, etc.) and sell it to them
-            3. The Villager should now be able to sell identical items; however, if they are low-skill eg. novice, it will limit the materials and enchantments they can make.
-
-          files: |
-            fabric/build/libs/tradeschool-fabric-${{ github.ref_name }}.jar
-            neoforge/build/libs/tradeschool-neoforge-${{ github.ref_name }}.jar
+          name: ${{ env.MOD_NAME }} ${{ env.VERSION }}
+          body_path: ${{ runner.temp }}/release-body.md
+          files: ${{ env.RELEASE_FILES }}
           fail_on_unmatched_files: true
-          # This is a proof-of-concept, so releases are flagged as
-          # pre-releases: GitHub keeps them out of the "Latest release"
-          # slot and marks them accordingly.
-          prerelease: true
+          prerelease: ${{ env.PRERELEASE == 'true' }}
 
       # Loaders, game versions and dependencies are read out of the jars'
       # own metadata (fabric.mod.json / neoforge.mods.toml), so there is
@@ -89,15 +134,28 @@ jobs:
         with:
           modrinth-id: ${{ vars.MODRINTH_ID }}
           modrinth-token: ${{ env.MODRINTH_TOKEN }}
-          files: |
-            fabric/build/libs/tradeschool-fabric-${{ github.ref_name }}.jar
-            neoforge/build/libs/tradeschool-neoforge-${{ github.ref_name }}.jar
-          name: Trade School ${{ github.ref_name }}
-          version: ${{ github.ref_name }}
-          # Matches the GitHub pre-release flag above: Modrinth's equivalent
-          # of a pre-release is a beta version channel.
-          version-type: beta
-          changelog: |
-            Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items — they'll learn and resell what you teach!
+          files: ${{ env.RELEASE_FILES }}
+          name: ${{ env.MOD_NAME }} ${{ env.VERSION }}
+          version: ${{ env.VERSION }}
+          version-type: ${{ env.VERSION_TYPE }}
+          changelog-file: ${{ runner.temp }}/changelog.md
 
-            See https://github.com/tomgidden/minecraft-tradeschool/releases/tag/${{ github.ref_name }}
+      # CurseForge is fussier than Modrinth about game versions: it will not
+      # accept a version string it doesn't already know, and inference from
+      # jar metadata can produce ranges it rejects. GAME_VERSIONS in
+      # release.env overrides that inference when set; left empty, mc-publish
+      # infers as it does for Modrinth.
+      #
+      # Skipped unless CURSEFORGE_TOKEN is set, as above.
+      - name: Publish to CurseForge
+        if: ${{ env.CURSEFORGE_TOKEN != '' }}
+        uses: Kir-Antipov/mc-publish@v3.3
+        with:
+          curseforge-id: ${{ vars.CURSEFORGE_ID }}
+          curseforge-token: ${{ env.CURSEFORGE_TOKEN }}
+          files: ${{ env.RELEASE_FILES }}
+          name: ${{ env.MOD_NAME }} ${{ env.VERSION }}
+          version: ${{ env.VERSION }}
+          version-type: ${{ env.VERSION_TYPE }}
+          game-versions: ${{ env.GAME_VERSIONS }}
+          changelog-file: ${{ runner.temp }}/changelog.md

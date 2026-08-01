@@ -45,6 +45,9 @@ public abstract class VillagerTradesMixin {
 
     private void interceptTradeUpdate(CallbackInfo ci) {
         Villager villager = (Villager) (Object) this;
+        // Offers only exist server-side; getOffers() throws on the client.
+        if (!(villager.level() instanceof ServerLevel)) return;
+
         VillagerData data = villager.getVillagerData();
         String professionId = data.profession().toString();
 

@@ -25,11 +25,11 @@ public abstract class VillagerDataMixin {
         String newProf = newData.profession().toString();
 
         if (!currentProf.equals(newProf)) {
-            Constants.LOGGER.info("Villager {} profession changed: {} -> {}", self.getUUID(), currentProf, newProf);
+            Constants.LOGGER.debug("Villager {} profession changed: {} -> {}", self.getUUID(), currentProf, newProf);
             if (currentProf.contains("librarian") && newProf.contains("none")) {
-                Constants.LOGGER.warn("Villager {} profession reverting from LIBRARIAN to NONE!", self.getUUID());
-                Constants.LOGGER.warn("Level: {} -> {}", currentData.level(), newData.level());
-                Constants.LOGGER.warn("Stack trace for profession revert:", new Throwable());
+                Constants.LOGGER.debug("Villager {} profession reverting from LIBRARIAN to NONE!", self.getUUID());
+                Constants.LOGGER.debug("Level: {} -> {}", currentData.level(), newData.level());
+                Constants.LOGGER.debug("Stack trace for profession revert:", new Throwable());
             }
         }
     }

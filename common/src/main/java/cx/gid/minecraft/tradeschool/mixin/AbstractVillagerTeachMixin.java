@@ -125,6 +125,9 @@ public abstract class AbstractVillagerTeachMixin {
     @Inject(method = "stopTrading", at = @At("HEAD"))
     private void onStopTrading(CallbackInfo ci) {
         if (!((Object) this instanceof Villager villager)) return;
+        // stopTrading also runs client-side (die() via ClientboundEntityEventPacket),
+        // where getOffers() throws — offers only exist on the server.
+        if (villager.level().isClientSide()) return;
         if (!(villager instanceof IVillagerTeachState state)) return;
         tradeschool$removeAllTeachOffers(villager, state);
     }
