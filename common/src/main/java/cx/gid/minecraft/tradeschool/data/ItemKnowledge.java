@@ -16,6 +16,7 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -35,7 +36,7 @@ public class ItemKnowledge {
 
     public ItemKnowledge(Holder<Item> baseItem, Map<Holder<Enchantment>, Integer> enchantments, int learnedAtLevel, DataComponentPatch preservedComponents) {
         this.baseItem = baseItem;
-        this.enchantments = new HashMap<>(enchantments);
+        this.enchantments = new LinkedHashMap<>(enchantments);
         this.learnedAtLevel = learnedAtLevel;
         this.preservedComponents = preservedComponents;
     }
@@ -45,7 +46,7 @@ public class ItemKnowledge {
     }
 
     public Map<Holder<Enchantment>, Integer> getEnchantments() {
-        return new HashMap<>(enchantments);
+        return new LinkedHashMap<>(enchantments);
     }
 
     public int getLearnedAtLevel() {
@@ -61,13 +62,18 @@ public class ItemKnowledge {
     public ItemStack createItemStack() {
         ItemStack stack = new ItemStack(baseItem);
 
-        // Apply enchantments
+        // Apply enchantments. Books keep theirs in STORED_ENCHANTMENTS — putting them in
+        // ENCHANTMENTS instead marks the book itself as enchanted, which renders the name
+        // in the wrong colour and stops anvils combining it with a normal enchanted book.
         if (!enchantments.isEmpty()) {
             ItemEnchantments.Mutable mutable = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
             for (Map.Entry<Holder<Enchantment>, Integer> entry : enchantments.entrySet()) {
                 mutable.set(entry.getKey(), entry.getValue());
             }
-            stack.set(DataComponents.ENCHANTMENTS, mutable.toImmutable());
+            var component = stack.getItem() == net.minecraft.world.item.Items.ENCHANTED_BOOK
+                ? DataComponents.STORED_ENCHANTMENTS
+                : DataComponents.ENCHANTMENTS;
+            stack.set(component, mutable.toImmutable());
         }
 
         // Apply preserved components (damage, repair cost, trim, custom name, etc.)
@@ -143,7 +149,7 @@ public class ItemKnowledge {
         Holder<Item> itemHolder = itemRegistry.getOrThrow(itemKey);
 
         // Load enchantments
-        Map<Holder<Enchantment>, Integer> enchantments = new HashMap<>();
+        Map<Holder<Enchantment>, Integer> enchantments = new LinkedHashMap<>();
         ListTag enchantmentList = nbt.getList("Enchantments").orElse(new ListTag());
         var enchantmentRegistry = registryAccess.lookupOrThrow(Registries.ENCHANTMENT);
 

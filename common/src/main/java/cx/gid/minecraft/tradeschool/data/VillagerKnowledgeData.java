@@ -5,7 +5,10 @@ import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -64,7 +67,31 @@ public class VillagerKnowledgeData {
      * @return true if taught successfully
      */
     public boolean teachEnchantment(int professionLevel, Holder<Enchantment> enchantment, int enchantmentLevel) {
-        knowledgeByLevel.put(professionLevel, new EnchantmentKnowledge(enchantment, professionLevel, enchantmentLevel));
+        return teachEnchantments(professionLevel, Map.of(enchantment, enchantmentLevel));
+    }
+
+    /**
+     * Teaches every enchantment from one book at the villager's current level.
+     *
+     * A book is one lesson however many enchantments it carries, so a Protection +
+     * Unbreaking book produces a single trade selling both. Taking only the first — as
+     * earlier versions did — silently threw away half of what the player handed over.
+     *
+     * @return false if this level's lesson is already used by something different, in
+     *     which case nothing is stored and the caller should refund.
+     */
+    public boolean teachEnchantments(int professionLevel, Map<Holder<Enchantment>, Integer> enchantments) {
+        if (enchantments.isEmpty()) return false;
+
+        // One lesson per profession level. Refuse rather than overwrite: silently
+        // replacing an earlier lesson loses knowledge the player paid for, and leaves
+        // them holding a book that appeared to be accepted.
+        EnchantmentKnowledge existing = knowledgeByLevel.get(professionLevel);
+        if (existing != null && !existing.matches(enchantments)) {
+            return false;
+        }
+        knowledgeByLevel.put(professionLevel,
+            new EnchantmentKnowledge(enchantments, professionLevel));
         return true;
     }
 
@@ -175,7 +202,7 @@ public class VillagerKnowledgeData {
      */
     public boolean alreadyKnowsEnchantment(Holder<Enchantment> enchantment) {
         for (EnchantmentKnowledge knowledge : knowledgeByLevel.values()) {
-            if (knowledge.getEnchantment().equals(enchantment)) {
+            if (knowledge.getEnchantments().containsKey(enchantment)) {
                 return true;
             }
         }
@@ -204,77 +231,145 @@ public class VillagerKnowledgeData {
     /**
      * Serializes this data to NBT for persistence.
      */
+    /**
+     * Writes the villager's lessons.
+     *
+     * One flat list of learned items. Earlier versions kept enchantments and items in
+     * separate lists with different key schemes, wrapped each record in a redundant
+     * {@code Level}/{@code Knowledge} pair that duplicated a value already inside the
+     * record, and stored the villager's UUID again beside the one the entity already has.
+     * None of that carried information.
+     */
     public CompoundTag toNbt(HolderLookup.Provider registryAccess) {
         CompoundTag nbt = new CompoundTag();
-
-        // Store UUID as two longs
-        nbt.putLong("VillagerUUIDMost", villagerUUID.getMostSignificantBits());
-        nbt.putLong("VillagerUUIDLeast", villagerUUID.getLeastSignificantBits());
         nbt.putBoolean("HasInitialTrade", hasInitialTrade);
 
-        // Serialize learned enchantments
-        ListTag knowledgeList = new ListTag();
+        ListTag learned = new ListTag();
         for (Map.Entry<Integer, EnchantmentKnowledge> entry : knowledgeByLevel.entrySet()) {
-            CompoundTag knowledgeTag = new CompoundTag();
-            knowledgeTag.putInt("Level", entry.getKey());
-            knowledgeTag.put("Knowledge", entry.getValue().toNbt(registryAccess));
-            knowledgeList.add(knowledgeTag);
+            learned.add(toLearnedItem(entry.getKey(), entry.getValue())
+                .toNbt(registryAccess));
         }
-        nbt.put("LearnedEnchantments", knowledgeList);
-
-        // Serialize learned items (key = "professionId:level")
-        ListTag itemKnowledgeList = new ListTag();
         for (Map.Entry<String, ItemKnowledge> entry : itemKnowledgeByProfessionLevel.entrySet()) {
-            CompoundTag itemTag = new CompoundTag();
-            itemTag.putString("ProfessionLevelKey", entry.getKey());
-            itemTag.put("Knowledge", entry.getValue().toNbt(registryAccess));
-            itemKnowledgeList.add(itemTag);
+            ItemKnowledge k = entry.getValue();
+            learned.add(new LearnedItem(k.createItemStack(), k.getLearnedAtLevel(), -1)
+                .toNbt(registryAccess));
         }
-        nbt.put("LearnedItems", itemKnowledgeList);
+        nbt.put("LearnedItems", learned);
 
         return nbt;
+    }
+
+    /** Renders an enchantment lesson as the book the villager sells. */
+    private static LearnedItem toLearnedItem(int level, EnchantmentKnowledge knowledge) {
+        ItemStack book = new ItemStack(net.minecraft.world.item.Items.ENCHANTED_BOOK);
+        ItemEnchantments.Mutable enchantments =
+            new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
+        knowledge.getEnchantments().forEach(enchantments::set);
+        book.set(DataComponents.STORED_ENCHANTMENTS, enchantments.toImmutable());
+        return new LearnedItem(book, level, -1);
     }
 
     /**
      * Deserializes data from NBT.
      */
-    public static VillagerKnowledgeData fromNbt(CompoundTag nbt, HolderLookup.Provider registryAccess) {
-        // Reconstruct UUID from two longs
-        long most = nbt.getLong("VillagerUUIDMost").orElse(0L);
-        long least = nbt.getLong("VillagerUUIDLeast").orElse(0L);
-        UUID uuid = new UUID(most, least);
-
+    /**
+     * Reads a villager's lessons, accepting the current flat format and the older split
+     * one. A villager taught under 26.0.1 keeps what it knew rather than forgetting on
+     * upgrade — the population is small, and silently losing their work to a format
+     * change is a worse outcome than carrying the migration.
+     *
+     * @param uuid the villager's own UUID; previously stored again in this tag, which was
+     *     redundant since the data hangs off the entity that has it.
+     */
+    public static VillagerKnowledgeData fromNbt(CompoundTag nbt, HolderLookup.Provider registryAccess,
+                                                UUID uuid) {
         VillagerKnowledgeData data = new VillagerKnowledgeData(uuid);
         data.hasInitialTrade = nbt.getBoolean("HasInitialTrade").orElse(false);
 
-        // Deserialize learned enchantments
-        ListTag knowledgeList = nbt.getList("LearnedEnchantments").orElse(new ListTag());
-        for (Tag tag : knowledgeList) {
-            CompoundTag knowledgeTag = (CompoundTag) tag;
-            int level = knowledgeTag.getInt("Level").orElse(1);
-            CompoundTag knowledgeNbt = knowledgeTag.getCompound("Knowledge").orElse(new CompoundTag());
-            EnchantmentKnowledge knowledge = EnchantmentKnowledge.fromNbt(
-                    knowledgeNbt,
-                    registryAccess
-            );
-            data.knowledgeByLevel.put(level, knowledge);
+        // Current format: one flat list of stacks.
+        boolean readFlat = false;
+        for (Tag tag : nbt.getList("LearnedItems").orElse(new ListTag())) {
+            if (!(tag instanceof CompoundTag entry)) continue;
+            if (!entry.contains("Item")) break;  // old shape; fall through to migration
+            readFlat = true;
+            LearnedItem learned = LearnedItem.fromNbt(entry, registryAccess);
+            if (learned != null) data.absorb(learned);
         }
+        if (readFlat) return data;
 
-        // Deserialize learned items
-        ListTag itemKnowledgeList = nbt.getList("LearnedItems").orElse(new ListTag());
-        for (Tag tag : itemKnowledgeList) {
-            CompoundTag itemTag = (CompoundTag) tag;
-            // Support both old format (Level int) and new format (ProfessionLevelKey string)
-            String key = itemTag.getString("ProfessionLevelKey").orElse(null);
-            if (key == null) {
-                int level = itemTag.getInt("Level").orElse(1);
-                key = "unknown:" + level;
-            }
-            CompoundTag itemNbt = itemTag.getCompound("Knowledge").orElse(new CompoundTag());
-            ItemKnowledge itemKnowledge = ItemKnowledge.fromNbt(itemNbt, registryAccess);
-            data.itemKnowledgeByProfessionLevel.put(key, itemKnowledge);
-        }
-
+        migrateLegacy(nbt, registryAccess, data);
         return data;
+    }
+
+    /** Back-compat overload for callers that have not been given the villager's UUID. */
+    public static VillagerKnowledgeData fromNbt(CompoundTag nbt, HolderLookup.Provider registryAccess) {
+        long most = nbt.getLong("VillagerUUIDMost").orElse(0L);
+        long least = nbt.getLong("VillagerUUIDLeast").orElse(0L);
+        return fromNbt(nbt, registryAccess, new UUID(most, least));
+    }
+
+    /**
+     * Reads the 26.0.1 shape: two lists, each record wrapped in a Level/Knowledge pair.
+     */
+    private static void migrateLegacy(CompoundTag nbt, HolderLookup.Provider registryAccess,
+                                      VillagerKnowledgeData data) {
+        for (Tag tag : nbt.getList("LearnedEnchantments").orElse(new ListTag())) {
+            if (!(tag instanceof CompoundTag wrapper)) continue;
+            int level = wrapper.getInt("Level").orElse(1);
+            CompoundTag inner = wrapper.getCompound("Knowledge").orElse(new CompoundTag());
+            EnchantmentKnowledge knowledge = EnchantmentKnowledge.fromNbt(inner, registryAccess);
+            if (knowledge != null) data.knowledgeByLevel.put(level, knowledge);
+        }
+
+        for (Tag tag : nbt.getList("LearnedItems").orElse(new ListTag())) {
+            if (!(tag instanceof CompoundTag wrapper)) continue;
+            String key = wrapper.getString("ProfessionLevelKey").orElse(null);
+            if (key == null) key = String.valueOf(wrapper.getInt("Level").orElse(1));
+            CompoundTag inner = wrapper.getCompound("Knowledge").orElse(new CompoundTag());
+            ItemKnowledge item = ItemKnowledge.fromNbt(inner, registryAccess);
+            if (item != null) data.itemKnowledgeByProfessionLevel.put(key, item);
+        }
+    }
+
+    /**
+     * Files a stored lesson back into the in-memory maps.
+     *
+     * The saved form is uniform, but the runtime still distinguishes enchantment lessons
+     * (librarians) from item lessons (everyone else), so an enchanted book goes to one map
+     * and anything else to the other. Merging those two maps properly is 26.1 work.
+     */
+    private void absorb(LearnedItem learned) {
+        ItemStack stack = learned.getResult();
+        int level = learned.getLearnedAt();
+
+        if (stack.getItem() == net.minecraft.world.item.Items.ENCHANTED_BOOK) {
+            ItemEnchantments stored =
+                stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
+            if (stored.isEmpty()) return;
+            Map<Holder<Enchantment>, Integer> map = new LinkedHashMap<>();
+            for (Holder<Enchantment> e : stored.keySet()) map.put(e, stored.getLevel(e));
+            knowledgeByLevel.put(level, new EnchantmentKnowledge(map, level));
+        } else {
+            ItemEnchantments enchs =
+                stack.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
+            Map<Holder<Enchantment>, Integer> map = new LinkedHashMap<>();
+            for (Holder<Enchantment> e : enchs.keySet()) map.put(e, enchs.getLevel(e));
+
+            var patch = net.minecraft.core.component.DataComponentPatch.builder();
+            copyIfPresent(stack, patch, DataComponents.DAMAGE);
+            copyIfPresent(stack, patch, DataComponents.REPAIR_COST);
+
+            itemKnowledgeByProfessionLevel.put(String.valueOf(level), new ItemKnowledge(
+                net.minecraft.core.registries.BuiltInRegistries.ITEM.wrapAsHolder(stack.getItem()),
+                map, level, patch.build()));
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> void copyIfPresent(ItemStack stack,
+            net.minecraft.core.component.DataComponentPatch.Builder builder,
+            net.minecraft.core.component.DataComponentType<T> type) {
+        T value = stack.get(type);
+        if (value != null) builder.set(type, value);
     }
 }

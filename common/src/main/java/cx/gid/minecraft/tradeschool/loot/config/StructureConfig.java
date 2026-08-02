@@ -15,7 +15,6 @@ public class StructureConfig {
     public Integer maxLevelOverride; // Override tier's max level
     public int rollsPerChest = 1;
     public float bookChance = 1.0f;
-    public boolean removeVanillaBooks = true;
     public List<String> primaryCategories;
     public Map<String, Double> crossoverCategories; // Category name -> probability
     public Map<String, EnchantmentWeight> customEnchantments; // Enchantment ID -> weight config

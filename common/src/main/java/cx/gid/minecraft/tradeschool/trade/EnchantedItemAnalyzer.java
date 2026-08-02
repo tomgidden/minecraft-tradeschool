@@ -14,6 +14,7 @@ import net.minecraft.world.item.enchantment.ItemEnchantments;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -91,8 +92,16 @@ public class EnchantedItemAnalyzer {
         DataComponents.REPAIR_COST
     );
 
-    /** Result of analyzing an item — carries the learned knowledge and human-readable message. */
-    public record AnalysisResult(ItemKnowledge knowledge, String learnMessage) {}
+    /**
+     * The outcome of analysing an item.
+     *
+     * {@code learnMessage} is a whole sentence; {@code learnedDescription} is just the
+     * item and its enchantments. Callers that want to phrase their own sentence should use
+     * the latter — picking the description back out of the sentence with a regex, as they
+     * used to, broke as soon as the wording changed.
+     */
+    public record AnalysisResult(ItemKnowledge knowledge, String learnMessage,
+                                 String learnedDescription) {}
 
     /**
      * Returns true if this item is gold for weapons/tools (valid at any villager level, kept as gold).
@@ -144,7 +153,7 @@ public class EnchantedItemAnalyzer {
         int a = getArmorTierIndex(item);  if (a >= 0) return a;
         if (isGoldWeaponOrTool(item)) return 0; // gold weapons/tools: valid at level 1
         if (isGoldArmor(item)) return 1;        // gold armor: valid at level 2 (tier index 1)
-        if (item == Items.BOW || item == Items.CROSSBOW || item == Items.TIPPED_ARROW) return 3;
+        if (item == Items.BOW || item == Items.CROSSBOW) return 3;
         if (item == Items.SHIELD) return 2;     // shield: armorer level 3 (tier index 2)
         return -1;
     }
@@ -176,7 +185,7 @@ public class EnchantedItemAnalyzer {
         }
 
         // Ranged / shield: no material downgrade
-        if (item == Items.BOW || item == Items.CROSSBOW || item == Items.TIPPED_ARROW || item == Items.SHIELD) {
+        if (item == Items.BOW || item == Items.CROSSBOW || item == Items.SHIELD) {
             return item;
         }
 
@@ -232,7 +241,8 @@ public class EnchantedItemAnalyzer {
         if (profession.contains("weaponsmith"))
             return item == Items.NETHERITE_SWORD || item == Items.NETHERITE_AXE;
         if (profession.contains("toolsmith"))
-            return item == Items.NETHERITE_PICKAXE || item == Items.NETHERITE_SHOVEL || item == Items.NETHERITE_HOE;
+            return item == Items.NETHERITE_PICKAXE || item == Items.NETHERITE_SHOVEL
+                || item == Items.NETHERITE_HOE || item == Items.NETHERITE_AXE;
         if (profession.contains("armorer"))
             return item == Items.NETHERITE_HELMET || item == Items.NETHERITE_CHESTPLATE ||
                    item == Items.NETHERITE_LEGGINGS || item == Items.NETHERITE_BOOTS;
@@ -291,20 +301,24 @@ public class EnchantedItemAnalyzer {
             enchantments = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
         }
 
-        Map<Holder<Enchantment>, Integer> learnedEnchantments = new HashMap<>();
+        // LinkedHashMap, not HashMap: this is where an item's enchantment order is
+        // established, and everything downstream — the trade, the chat line, the title —
+        // reports whatever order it finds. An unordered map made the same book read
+        // differently in each of them.
+        Map<Holder<Enchantment>, Integer> learnedEnchantments = new LinkedHashMap<>();
         List<String> learnedDesc  = new ArrayList<>();
         List<String> skippedDesc  = new ArrayList<>();
-
-        boolean allowNonTradableTreasure = LootDistributionManager.getInstance()
-            .getConfig().global.allowNonTradableTreasure;
 
         for (Holder<Enchantment> ench : enchantments.keySet()) {
             int originalLevel = enchantments.getLevel(ench);
             int maxLevel      = EnchantmentProperties.getMaxLevel(ench);
             boolean isSingleLevel = maxLevel == 1;
-            int minVillagerLevel  = isSingleLevel ? 3 : 1;
+            int minVillagerLevel  = isSingleLevel
+                ? LootDistributionManager.getInstance().getConfig()
+                    .global.trade.singleLevelEnchantmentMinVillagerLevel
+                : 1;
 
-            if (!EnchantmentProperties.isTradable(ench) && !allowNonTradableTreasure) {
+            if (!EnchantmentProperties.isTradable(ench)) {
                 skippedDesc.add(enchantmentName(ench, originalLevel));
                 continue;
             }
@@ -350,7 +364,8 @@ public class EnchantedItemAnalyzer {
 
         Holder<Item> itemHolder = net.minecraft.core.registries.BuiltInRegistries.ITEM.wrapAsHolder(learnedItem);
         ItemKnowledge knowledge = new ItemKnowledge(itemHolder, learnedEnchantments, villagerLevel, preserved.build());
-        return new AnalysisResult(knowledge, msg.toString());
+        return new AnalysisResult(knowledge, msg.toString(),
+            Describe.item(knowledge.createItemStack()));
     }
 
     @SuppressWarnings("unchecked")
@@ -398,7 +413,18 @@ public class EnchantedItemAnalyzer {
         return false;
     }
 
+    /**
+     * Axes are both a weapon and a tool, as in vanilla: toolsmiths and weaponsmiths each
+     * deal in them. They live in WEAPON_TIERS for tier/downgrade purposes, so the tool
+     * predicate has to name them explicitly.
+     */
+    private static boolean isAxe(Item item) {
+        return item == Items.WOODEN_AXE || item == Items.STONE_AXE || item == Items.COPPER_AXE
+            || item == Items.IRON_AXE   || item == Items.DIAMOND_AXE || item == Items.GOLDEN_AXE;
+    }
+
     private static boolean isTool(Item item) {
+        if (isAxe(item)) return true;
         if (GOLD_WEAPONS_TOOLS.contains(item) && item != Items.GOLDEN_SWORD && item != Items.GOLDEN_AXE) return true;
         for (Item[] row : TOOL_TIERS) for (Item i : row) if (i == item) return true;
         return false;
@@ -412,7 +438,10 @@ public class EnchantedItemAnalyzer {
     }
 
     private static boolean isRangedWeapon(Item item) {
-        return item == Items.BOW || item == Items.CROSSBOW || item == Items.TIPPED_ARROW;
+        // Tipped arrows are deliberately excluded: their effect lives in POTION_CONTENTS,
+        // not in an enchantment component, so the teaching pipeline would see an unenchanted
+        // item and have the villager sell plain arrows with the potion stripped off.
+        return item == Items.BOW || item == Items.CROSSBOW;
     }
 
     // ── string helpers ────────────────────────────────────────────────────────

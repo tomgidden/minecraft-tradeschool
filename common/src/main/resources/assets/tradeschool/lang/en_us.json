@@ -1,4 +1,36 @@
 {
-  "_comment": "Hardcoded English for server-side-only proof-of-concept only. A complete implementation would require the mod client-side and use proper translation keys throughout.",
-  "enchantment.tradeschool.curse_of_copyright.desc": "Prevents villagers from learning this enchantment"
+  "_comment": "Resolved server-side by TradeSchoolMessages and sent as a translatableWithFallback, so unmodded clients read them in their own language and modded clients translate locally. §-codes highlight only the pertinent detail — the enchantment, or the limitation — so the eye lands on what changed rather than on the whole sentence.",
+
+  "enchantment.tradeschool.curse_of_copyright.desc": "Prevents villagers from learning this enchantment",
+
+  "tradeschool.refusal.netherite": "Villagers cannot learn to craft §enetherite§r items.",
+  "tradeschool.refusal.shield_too_junior": "%s isn't experienced enough to make §eshields§r yet.",
+  "tradeschool.refusal.copyrighted": "Villagers can't learn from §ecopyrighted§r books and items.",
+  "tradeschool.refusal.already_sells": "%s §ealready sells that§r.",
+  "tradeschool.refusal.never_learnable": "Villagers cannot learn §e%2$s§r enchantments.",
+  "tradeschool.refusal.too_junior": "%s isn't experienced enough to learn that §eyet§r.",
+  "tradeschool.refusal.lesson_used": "%s has §ealready learned all they can§r at this level.",
+
+  "tradeschool.hint.librarian": "%1$s is eager to learn. Offer them an §eenchanted book§r and they will study it and begin selling that enchantment.",
+  "tradeschool.hint.weaponsmith": "%1$s is eager to learn. Offer them an §eenchanted sword or axe§r and they will learn to craft and sell it.",
+  "tradeschool.hint.toolsmith": "%1$s is eager to learn. Offer them an §eenchanted axe, pickaxe, shovel, or hoe§r and they will learn to craft and sell it.",
+  "tradeschool.hint.armorer": "%1$s is eager to learn. Offer them §earmor or a shield§r and they will learn to craft and sell it.",
+  "tradeschool.hint.fletcher": "%1$s is eager to learn. Offer them an §eenchanted bow or crossbow§r and they will learn to sell it.",
+
+
+  "tradeschool.preview.netherite": "Villagers cannot learn to craft §enetherite§r items.",
+  "tradeschool.preview.full_learn": "You can teach %1$s to make copies of your %2$s.",
+  "tradeschool.preview.partial_learn": "You can teach %1$s to make %2$s from your %3$s — but it will be used up.",
+
+  "tradeschool.refusal.worn_armor": "%s can only learn from armor you're holding, not wearing.",
+  "tradeschool.trade.full_learn": "This trade would teach %1$s to make copies of your %2$s.",
+  "tradeschool.trade.partial_learn": "This trade would teach %1$s to make %2$s — the rest won't carry over.",
+
+  "tradeschool.taught.learned": "%1$s has learned to make %2$s.",
+  "tradeschool.taught.lesson_used": "%1$s has already learned all they can at this level.",
+  "tradeschool.taught.copyrighted": "Villagers can't learn from §ecopyrighted§r books and items.",
+
+  "tradeschool.taught.title": "§aLesson learned",
+  "tradeschool.taught.subtitle": "%1$s can now make §e%2$s§r",
+  "tradeschool.refund": "Your §e%s§r was handed back — the villager couldn't learn from it after all. Sorry!"
 }

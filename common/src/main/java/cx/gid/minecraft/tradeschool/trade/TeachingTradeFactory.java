@@ -108,14 +108,13 @@ public class TeachingTradeFactory {
             return false;
         }
 
-        // Check for Curse of Copyright before processing
-        for (Holder<Enchantment> enchantment : enchantments.keySet()) {
-            if (ModEnchantments.isCurseOfCopyright(enchantment)) {
-                Constants.LOGGER.info("Villager {} refused to learn copyrighted enchantment", villager.getUUID());
-                // Send message to nearby players
-                sendCurseRejectionMessage(villager);
-                return false;
-            }
+        // Check for Curse of Copyright before processing. A book carrying only the curse
+        // is exempt — librarians learn to produce it (see ModEnchantments.isPureCurseBook).
+        if (ModEnchantments.isCurseProtected(tradedBook)) {
+            Constants.debug("Villager {} refused to learn copyrighted enchantment", villager.getUUID());
+            // Send message to nearby players
+            sendCurseRejectionMessage(villager);
+            return false;
         }
 
         // Get the first enchantment (books should only have one, but we'll take first
@@ -146,7 +145,7 @@ public class TeachingTradeFactory {
         if (knowledge.teachEnchantment(professionLevel, learnedEnchantment, cappedLevel)) {
             VillagerKnowledgeManager.getInstance().saveData(villager, knowledge);
 
-            Constants.LOGGER.info("Villager {} learned enchantment {} level {} (book was level {}, villager is level {})",
+            Constants.debug("Villager {} learned enchantment {} level {} (book was level {}, villager is level {})",
                     villager.getUUID(),
                     learnedEnchantment.unwrapKey().map(key -> key.toString()).orElse("unknown"),
                     cappedLevel,
@@ -176,18 +175,15 @@ public class TeachingTradeFactory {
             return;
         }
 
-        // Should be Component.translatable("tradeschool.teaching.curse_rejected") with a lang file client-side.
-        Component message = Component.literal("The villager refuses to study copyrighted material!");
-
-        // Send to all players within 16 blocks
+        // Translated per recipient rather than broadcast as one literal string, so a
+        // player reading in another language gets their own.
         serverLevel.getPlayers(player -> {
-            if (player instanceof ServerPlayer serverPlayer) {
-                double distance = serverPlayer.distanceToSqr(villager);
-                if (distance <= 16 * 16) {
-                    serverPlayer.sendSystemMessage(message);
-                }
+            if (player instanceof ServerPlayer serverPlayer
+                    && serverPlayer.distanceToSqr(villager) <= 16 * 16) {
+                serverPlayer.sendSystemMessage(cx.gid.minecraft.tradeschool.TradeSchoolMessages.of(
+                    serverPlayer, cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_COPYRIGHTED));
             }
-            return false; // Don't collect, just iterate
+            return false;
         });
     }
 }

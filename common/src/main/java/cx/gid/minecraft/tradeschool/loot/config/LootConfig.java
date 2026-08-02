@@ -39,9 +39,7 @@ public class LootConfig {
 
         config.global = new GlobalConfig(
             defaultTierMaxLevels,
-            0.05, // defaultCrossoverChance
-            true, // removeAllVanillaEnchantedBooks
-            false // allowNonTradableTreasure defaults to false
+            0.05 // defaultCrossoverChance
         );
 
         config.categories = new HashMap<>();

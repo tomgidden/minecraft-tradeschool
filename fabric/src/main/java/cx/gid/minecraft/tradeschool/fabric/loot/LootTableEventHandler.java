@@ -3,7 +3,6 @@ package cx.gid.minecraft.tradeschool.fabric.loot;
 import cx.gid.minecraft.tradeschool.Constants;
 import cx.gid.minecraft.tradeschool.loot.LootDistributionManager;
 import cx.gid.minecraft.tradeschool.loot.function.ApplyCurseOfCopyrightFunction;
-import cx.gid.minecraft.tradeschool.loot.tier.StructureTier;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 
 /**
@@ -29,16 +28,6 @@ public class LootTableEventHandler {
                 manager.initializeEarly();
             }
 
-            // Bail out if loot distribution is globally disabled (e.g. for baseline testing)
-            if (!manager.getConfig().global.enabled) {
-                return;
-            }
-
-            // Only modify built-in (vanilla) loot tables
-            if (!source.isBuiltin()) {
-                return;
-            }
-
             // Extract identifier from ResourceKey (format: ResourceKey[minecraft:loot_table / minecraft:chests/ancient_city])
             String keyStr = key.toString();
             int slashIndex = keyStr.lastIndexOf(" / ");
@@ -50,16 +39,20 @@ public class LootTableEventHandler {
                 lootTableId = keyStr; // Fallback
             }
 
+            // Shared gate — keep this identical to the NeoForge handler.
+            if (!manager.shouldModifyLootTable(lootTableId)) {
+                return;
+            }
+
             try {
-                // Check if this loot table should have curse applied to existing pools
-                StructureTier tier = manager.getTierForLootTable(lootTableId);
-                if (tier != null) {
-                    // Apply Curse of Copyright to ALL existing pools (vanilla enchanted items)
-                    // This uses Fabric's pool modification API
+                // Apply Curse of Copyright to ALL existing pools (vanilla enchanted items).
+                // Covers every found-loot table, not just the structures configured for
+                // book injection — fishing and archaeology included.
+                if (manager.shouldCurseLootTable(lootTableId)) {
                     tableBuilder.modifyPools(poolBuilder -> {
-                        poolBuilder.apply(ApplyCurseOfCopyrightFunction.applyCurse(tier));
+                        poolBuilder.apply(ApplyCurseOfCopyrightFunction.applyCurse());
                     });
-                    Constants.LOGGER.debug("Applied curse function to existing pools in {} (tier: {})", lootTableId, tier);
+                    Constants.LOGGER.debug("Applied curse function to existing pools in {}", lootTableId);
                 }
 
                 // Now add our custom enchanted books (gear injection handled in common)

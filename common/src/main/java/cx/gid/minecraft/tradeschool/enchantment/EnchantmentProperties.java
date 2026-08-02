@@ -21,21 +21,28 @@ public class EnchantmentProperties {
     return enchantment.is(EnchantmentTags.TREASURE);
   }
 
+  /**
+   * Whether villagers may learn this enchantment.
+   *
+   * The blocked set is configurable ({@code unlearnable_enchantments}), defaulting to the
+   * three vanilla treasure enchantments no villager trades — Soul Speed, Swift Sneak and
+   * Wind Burst. Empty the list to let villagers learn anything.
+   */
   public static boolean isTradable(Holder<Enchantment> enchantment) {
-    // Most enchantments ARE tradable (both normal and treasure)
-    // The only non-tradable ones are specific treasure enchantments:
-    // - Soul Speed (minecraft:soul_speed)
-    // - Swift Sneak (minecraft:swift_sneak)
-    // - Wind Burst (minecraft:wind_burst)
+    var global = cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
+        .getConfig().global;
 
-    // Check by enchantment ID
     String enchantmentId =
-        enchantment.unwrapKey().map(key -> key.toString()).orElse("unknown");
+        enchantment.unwrapKey().map(key -> key.identifier().toString()).orElse("unknown");
 
-    // These specific enchantments are not tradable by villagers
-    return (!enchantmentId.contains("soul_speed") &&
-            !enchantmentId.contains("swift_sneak") &&
-            !enchantmentId.contains("wind_burst"));
+    for (String blocked : global.unlearnableEnchantments) {
+      // Namespace optional in config, so "wind_burst" and "minecraft:wind_burst" both work.
+      if (enchantmentId.equals(blocked)
+          || enchantmentId.equals("minecraft:" + blocked)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   public static boolean isTradableTreasure(Holder<Enchantment> enchantment) {

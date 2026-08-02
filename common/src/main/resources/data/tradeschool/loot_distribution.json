@@ -2,6 +2,7 @@
   "version": 1,
   "global": {
     "enabled": true,
+    "debug_logging": false,
     "default_tier_max_levels": {
       "LOW": 2,
       "MEDIUM": 3,
@@ -9,8 +10,56 @@
       "TOP": 5
     },
     "default_crossover_chance": 0.05,
-    "remove_all_vanilla_enchanted_books": true,
-    "allowNonTradableTreasure": false
+    "unlearnable_enchantments": [
+      "minecraft:soul_speed",
+      "minecraft:swift_sneak",
+      "minecraft:wind_burst"
+    ],
+    "curse_probability": 0.1,
+    "found_loot_prefixes": [
+      "minecraft:chests/",
+      "minecraft:archaeology/",
+      "minecraft:gameplay/fishing"
+    ],
+    "feedback": {
+      "_comment": "Which channels player-facing messages use. The action bar is off by default: it cannot be held on screen long enough to read a sentence, so those messages belong in chat where they can be re-read.",
+      "chat": true,
+      "action_bar": false,
+      "title": true,
+      "title_fade_in_ticks": 5,
+      "title_stay_ticks": 80,
+      "title_fade_out_ticks": 20
+    },
+    "reputation": {
+      "minor_positive_per_teach": 5,
+      "major_positive_per_teach": 0
+    },
+    "trade": {
+      "curse_book_required_level": 5,
+      "curse_book_availability": 0.5,
+      "curse_book_emerald_cost": 1,
+      "full_learn_payment_divisor": 2,
+      "teach_xp_multiplier": 1.0,
+      "book_price_common": 5,
+      "book_price_uncommon": 10,
+      "book_price_rare": 15,
+      "book_price_very_rare": 20,
+      "book_price_per_level": 5,
+      "learned_trade_max_uses": 12,
+      "single_level_enchantment_min_villager_level": 3,
+      "max_teach_offers": 6,
+      "teach_preview_radius": 5.0,
+      "hint_radius": 8.0,
+      "_fillers_comment": "Commodity buy trades filling profession levels left empty by removing teachable items — without them an untaught smith has nothing to trade and can never gain the XP to reach the level where teaching unlocks.",
+      "fillers": [
+        { "profession": "armorer",     "level": 1, "material": "minecraft:coal",    "count": 15 },
+        { "profession": "armorer",     "level": 2, "material": "minecraft:leather", "count": 6  },
+        { "profession": "weaponsmith", "level": 1, "material": "minecraft:coal",    "count": 15 },
+        { "profession": "weaponsmith", "level": 2, "material": "minecraft:flint",   "count": 10 },
+        { "profession": "toolsmith",   "level": 1, "material": "minecraft:coal",    "count": 15 },
+        { "profession": "toolsmith",   "level": 2, "material": "minecraft:gravel",  "count": 10 }
+      ]
+    }
   },
   "categories": {
     "WATER": {
@@ -423,7 +472,7 @@
       "enabled": true,
       "tier": "LOW",
       "rolls_per_chest": 1,
-      "book_chance": 0.15,
+      "book_chance": 0.35,
       "remove_vanilla_books": true,
       "primary_categories": ["UTILITY"],
       "crossover_categories": { "NETHER": 0.1 },
@@ -445,7 +494,7 @@
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.20,
+      "book_chance": 0.40,
       "remove_vanilla_books": true,
       "primary_categories": ["UTILITY", "COMBAT"],
       "crossover_categories": { "PROTECTION": 0.12 },
@@ -470,7 +519,7 @@
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.45,
+      "book_chance": 0.50,
       "remove_vanilla_books": true,
       "primary_categories": ["WATER"],
       "crossover_categories": { "UTILITY": 0.1 },
@@ -482,7 +531,7 @@
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.45,
+      "book_chance": 0.50,
       "remove_vanilla_books": true,
       "primary_categories": ["WATER"],
       "crossover_categories": { "UTILITY": 0.1 },

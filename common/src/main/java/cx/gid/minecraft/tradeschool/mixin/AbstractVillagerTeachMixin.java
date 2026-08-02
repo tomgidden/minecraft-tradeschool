@@ -78,19 +78,22 @@ public abstract class AbstractVillagerTeachMixin {
         ItemStack groupFirst = stackGroups.isEmpty() || matchedSlot >= stackGroups.size() || stackGroups.get(matchedSlot).isEmpty()
             ? ItemStack.EMPTY : stackGroups.get(matchedSlot).get(0);
 
+        // What the player actually put in the slot is what gets taught. The offer only
+        // invites the trade; it must never decide the lesson, or a player inserting one
+        // book can end up teaching a different one that merely matched the offer.
         ItemStack taught;
-        if (!submitted.isEmpty() && !groupFirst.isEmpty() && submitted.getItem() == groupFirst.getItem()) {
+        if (!submitted.isEmpty()) {
             taught = submitted;
         } else {
             taught = groupFirst;
-            Constants.LOGGER.warn("[TradeSchool] notifyTrade: submitted item mismatch or empty, falling back to stored copy");
+            Constants.LOGGER.warn("[TradeSchool] notifyTrade: no submitted item captured, falling back to stored copy");
         }
 
         // Debug logging
         {
             ItemEnchantments tEnchs = taught.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
             if (tEnchs.isEmpty()) tEnchs = taught.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-            Constants.LOGGER.info("[TradeSchool] notifyTrade: teaching item={} enchants={} damage={} repair_cost={}",
+            Constants.debug("[TradeSchool] notifyTrade: teaching item={} enchants={} damage={} repair_cost={}",
                 taught.getItem(),
                 tEnchs,
                 taught.getOrDefault(DataComponents.DAMAGE, 0),
@@ -98,6 +101,22 @@ public abstract class AbstractVillagerTeachMixin {
         }
 
         String professionId = villager.getVillagerData().profession().toString();
+
+        // The only point at which the villager complains about copyright: an actual sale.
+        // Teach offers are never built for copyrighted items (VillagerPickupMixin skips
+        // them), so this is a backstop — reachable only if an offer is constructed by some
+        // path that bypassed that scan.
+        if (cx.gid.minecraft.tradeschool.enchantment.ModEnchantments.isCurseProtected(taught)) {
+            if (villager.level() instanceof ServerLevel sl) {
+                sl.playSound(null, villager.blockPosition(),
+                    SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
+            }
+            tradeschool$tellTeacher(villager,
+                cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_COPYRIGHTED);
+            tradeschool$refund(villager, taught);
+            tradeschool$removeAllTeachOffers(villager, state);
+            return;
+        }
 
         if (professionId.contains("librarian")) {
             tradeschool$teachEnchantedBookNow(villager, taught);
@@ -107,6 +126,8 @@ public abstract class AbstractVillagerTeachMixin {
 
         tradeschool$playTeachingEffects(villager);
         tradeschool$grantTeachingAdvancement(villager);
+        tradeschool$grantTeachingReputation(villager);
+        tradeschool$sendTaughtTitle(villager, taught, professionId);
 
         // Grant XP orbs to nearby player equal to the sell price of the learned item
         int professionLevel = villager.getVillagerData().level();
@@ -171,36 +192,166 @@ public abstract class AbstractVillagerTeachMixin {
 
         var k = result.knowledge();
         ItemStack learned = k.createItemStack();
-        Constants.LOGGER.info("[TradeSchool] Villager {} learned: item={} enchants={} damage={} repair_cost={} at level {}",
+        Constants.debug("[TradeSchool] Villager {} learned: item={} enchants={} damage={} repair_cost={} at level {}",
             villager.getUUID(), k.getBaseItem().value(), k.getEnchantments(),
             learned.getOrDefault(DataComponents.DAMAGE, 0),
             learned.getOrDefault(DataComponents.REPAIR_COST, 0),
             professionLevel);
-        tradeschool$sendNearbyMessage(villager, result.learnMessage());
+        tradeschool$tellTeacher(villager,
+            cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_LEARNED,
+            cx.gid.minecraft.tradeschool.trade.Describe.villager(villager, label),
+            result.learnedDescription());
+    }
+
+    /**
+     * Hands an item back to the teaching player after a lesson could not go ahead.
+     *
+     * By the time notifyTrade runs, vanilla has already taken the payment and handed over
+     * the reward — there is no way to veto the trade from here. Every bail-out below is
+     * therefore an item the player has paid with and received nothing for, so it has to be
+     * returned. The scan-time checks in VillagerPickupMixin should prevent all of these
+     * from ever being reachable; this exists so that a gap in those checks costs the player
+     * nothing worse than a confusing message.
+     */
+    @Unique
+    private void tradeschool$refund(Villager villager, ItemStack item) {
+        if (item.isEmpty()) return;
+        if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+
+        java.util.UUID teacher = ((IVillagerTeachState) villager).tradeschool$getTeachingPlayer();
+        ServerPlayer player = teacher != null
+            ? serverLevel.getServer().getPlayerList().getPlayer(teacher)
+            : null;
+
+        ItemStack copy = item.copy();
+        if (player != null) {
+            // Falls to the ground at the player's feet if their inventory is full.
+            if (!player.getInventory().add(copy)) {
+                player.drop(copy, false);
+            }
+        } else {
+            // No player to hand it to — drop it by the villager rather than destroy it.
+            net.minecraft.world.entity.item.ItemEntity dropped =
+                new net.minecraft.world.entity.item.ItemEntity(serverLevel,
+                    villager.getX(), villager.getY() + 0.5, villager.getZ(), copy);
+            serverLevel.addFreshEntity(dropped);
+        }
+
+        // "Villager disagrees" over the sound of them going back to work.
+        String professionId = villager.getVillagerData().profession().toString();
+        serverLevel.playSound(null, villager.blockPosition(),
+            SoundEvents.VILLAGER_NO, SoundSource.NEUTRAL, 1.0f, 1.0f);
+        var work = tradeschool$workSound(professionId);
+        if (work != null) {
+            serverLevel.playSound(null, villager.blockPosition(), work, SoundSource.NEUTRAL, 0.7f, 1.0f);
+        }
+
+        // Keep the player-facing note short; the detail belongs in the log below.
+        if (player != null) {
+            player.sendSystemMessage(cx.gid.minecraft.tradeschool.TradeSchoolMessages.of(
+                player, cx.gid.minecraft.tradeschool.TradeSchoolMessages.REFUND,
+                copy.getHoverName().getString()));
+        }
+        Constants.LOGGER.warn(
+            "[TradeSchool] Refunded {} — a teach offer was accepted that should never have been "
+            + "built. Vanilla completes the trade before notifyTrade fires, so it can only be "
+            + "undone, not prevented. The scan in VillagerPickupMixin is meant to catch this "
+            + "first; reaching here means a gap in those checks.", copy.getItem());
     }
 
     @Unique
     private void tradeschool$teachEnchantedBookNow(Villager villager, ItemStack book) {
         if (book.getItem() != Items.ENCHANTED_BOOK) return;
         ItemEnchantments stored = book.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        if (stored.isEmpty()) return;
+        if (stored.isEmpty()) {
+            tradeschool$refund(villager, book);
+            return;
+        }
 
-        Holder<Enchantment> ench = stored.keySet().iterator().next();
         int professionLevel = villager.getVillagerData().level();
-        int lvl = Math.min(stored.getLevel(ench), professionLevel);
 
+        // Honour the same gate analyzeItem applies when building the offer: single-level
+        // enchantments need a villager of at least the configured level. Picking the first
+        // stored enchantment unconditionally would let a book the villager was never
+        // offered — Silk Touch at level 2, say — be learned anyway.
+        var analysis = EnchantedItemAnalyzer.analyzeItem(book, professionLevel, "librarian");
+        var learnable = analysis.knowledge().getEnchantments();
+        if (learnable.isEmpty()) {
+            Constants.debug("Villager {} cannot learn anything from this book at level {}",
+                villager.getUUID(), professionLevel);
+            tradeschool$refund(villager, book);
+            return;
+        }
+
+        // Every learnable enchantment from the book, not just the first — a Protection +
+        // Unbreaking book teaches both, and produces one trade selling both.
         VillagerKnowledgeData knowledge = VillagerKnowledgeManager.getInstance().getOrCreateData(villager);
-        knowledge.teachEnchantment(professionLevel, ench, lvl);
+        if (!knowledge.teachEnchantments(professionLevel, learnable)) {
+            tradeschool$refund(villager, book);
+            tradeschool$tellTeacher(villager,
+                cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_LESSON_USED,
+                cx.gid.minecraft.tradeschool.trade.Describe.villager(villager, "librarian"));
+            return;
+        }
         VillagerKnowledgeManager.getInstance().saveData(villager, knowledge);
         if (villager.getVillagerXp() <= 0) villager.setVillagerXp(1);
 
-        String enchName = tradeschool$capitaliseWords(ench.unwrapKey()
-            .map(k -> k.identifier().getPath().replace('_', ' ')).orElse("unknown"));
-        String levelStr = ench.value().getMaxLevel() == 1 ? "" : " " + tradeschool$toRoman(lvl);
-        tradeschool$sendNearbyMessage(villager, "The librarian has learned how to enchant a book with '"
-            + enchName + levelStr + "'");
-        Constants.LOGGER.info("Villager {} learned enchantment {} level {}", villager.getUUID(),
-            ench.unwrapKey().map(k -> k.toString()).orElse("unknown"), lvl);
+        StringBuilder names = new StringBuilder();
+        for (var e : learnable.entrySet()) {
+            if (names.length() > 0) names.append(", ");
+            names.append(tradeschool$capitaliseWords(e.getKey().unwrapKey()
+                .map(k -> k.identifier().getPath().replace('_', ' ')).orElse("unknown")));
+            if (e.getKey().value().getMaxLevel() != 1) {
+                names.append(' ').append(tradeschool$toRoman(e.getValue()));
+            }
+        }
+        tradeschool$tellTeacher(villager,
+            cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_LEARNED,
+            cx.gid.minecraft.tradeschool.trade.Describe.villager(villager, "librarian"),
+            cx.gid.minecraft.tradeschool.trade.Describe.enchantments(learnable));
+        Constants.debug("Villager {} learned enchantments {}", villager.getUUID(), learnable);
+    }
+
+    /**
+     * Rewards the teaching player with gossip, improving the prices this villager offers
+     * them. Amounts are configurable; by default only MINOR_POSITIVE is granted, so
+     * teaching never reaches the permanent cure-tier discount.
+     */
+    @Unique
+    private void tradeschool$grantTeachingReputation(Villager villager) {
+        if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+
+        var repConfig = cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
+            .getConfig().global.reputation;
+        if (repConfig.minorPositivePerTeach <= 0 && repConfig.majorPositivePerTeach <= 0) return;
+
+        // Prefer the player the teach offer was built for; fall back to the nearest player
+        // so a teach completed through some other path still credits someone.
+        java.util.UUID teacher = ((IVillagerTeachState) villager).tradeschool$getTeachingPlayer();
+        ServerPlayer player = teacher != null
+            ? serverLevel.getServer().getPlayerList().getPlayer(teacher)
+            : null;
+        if (player == null) {
+            player = serverLevel.getNearestPlayer(villager, 16.0) instanceof ServerPlayer sp ? sp : null;
+        }
+        if (player == null) return;
+
+        var gossips = villager.getGossips();
+        if (repConfig.minorPositivePerTeach > 0) {
+            gossips.add(player.getUUID(),
+                net.minecraft.world.entity.ai.gossip.GossipType.MINOR_POSITIVE,
+                repConfig.minorPositivePerTeach);
+        }
+        if (repConfig.majorPositivePerTeach > 0) {
+            gossips.add(player.getUUID(),
+                net.minecraft.world.entity.ai.gossip.GossipType.MAJOR_POSITIVE,
+                repConfig.majorPositivePerTeach);
+        }
+
+        Constants.debug("[TradeSchool] Granted teaching reputation to {} (minor +{}, major +{}); reputation now {}",
+            player.getGameProfile().name(),
+            repConfig.minorPositivePerTeach, repConfig.majorPositivePerTeach,
+            villager.getPlayerReputation(player));
     }
 
     @Unique
@@ -215,21 +366,96 @@ public abstract class AbstractVillagerTeachMixin {
         });
     }
 
+    /**
+     * A centre-screen title announcing what the villager learned.
+     *
+     * Teaching is the mod's payoff moment and easy to miss in chat, so it gets the loudest
+     * feedback the server can send without a client mod. Titles are pure packets — no
+     * resource pack or client-side code involved.
+     */
+    @Unique
+    private void tradeschool$sendTaughtTitle(Villager villager, ItemStack taught, String professionId) {
+        if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+
+        var feedback = cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
+            .getConfig().global.feedback;
+        if (!feedback.title) return;
+
+        java.util.UUID teacher = ((IVillagerTeachState) villager).tradeschool$getTeachingPlayer();
+        ServerPlayer player = teacher != null
+            ? serverLevel.getServer().getPlayerList().getPlayer(teacher)
+            : null;
+        if (player == null) return;
+
+        String label = tradeschool$getProfessionLabel(professionId);
+        int professionLevel = villager.getVillagerData().level();
+        var result = EnchantedItemAnalyzer.analyzeItem(taught, professionLevel, label);
+        String learned = result.learnedDescription();
+
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket(
+            feedback.titleFadeInTicks, feedback.titleStayTicks, feedback.titleFadeOutTicks));
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket(
+            cx.gid.minecraft.tradeschool.TradeSchoolMessages.of(
+                player, cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_SUBTITLE,
+                label, learned)));
+        player.connection.send(new net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket(
+            cx.gid.minecraft.tradeschool.TradeSchoolMessages.of(
+                player, cx.gid.minecraft.tradeschool.TradeSchoolMessages.TAUGHT_TITLE)));
+    }
+
+    /**
+     * The sound of a villager plying their trade — a librarian's page-turn, a weaponsmith's
+     * grindstone. Null for anything unexpected rather than guessing at a wrong profession.
+     *
+     * Sound choice is constrained by subtitles. A server-side-only mod cannot register its
+     * own sound events (the client resolves identifiers against assets it holds, so an
+     * unknown id is simply silent), which rules out a bespoke "Villager learns" cue. Every
+     * vanilla event used here was picked because its subtitle is *honest*: "Librarian
+     * works" and "Villager cheers" both describe what happened. Tempting alternatives were
+     * rejected on that basis — enchantment_table.use subtitles as "Enchanting Table used"
+     * when no table exists, and player.levelup as "Player dings" when it is the villager
+     * who gained a level.
+     */
+    @Unique
+    private net.minecraft.sounds.SoundEvent tradeschool$workSound(String professionId) {
+        if (professionId.contains("librarian"))   return SoundEvents.VILLAGER_WORK_LIBRARIAN;
+        if (professionId.contains("armorer"))     return SoundEvents.VILLAGER_WORK_ARMORER;
+        if (professionId.contains("toolsmith"))   return SoundEvents.VILLAGER_WORK_TOOLSMITH;
+        if (professionId.contains("weaponsmith")) return SoundEvents.VILLAGER_WORK_WEAPONSMITH;
+        if (professionId.contains("fletcher"))    return SoundEvents.VILLAGER_WORK_FLETCHER;
+        return null;
+    }
+
     @Unique
     private void tradeschool$playTeachingEffects(Villager villager) {
         if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+
+        // Enchanting glyphs rising through the usual happy-villager sparkle, to read as
+        // knowledge transferring rather than an ordinary trade.
         for (int i = 0; i < 20; i++) {
-            double ox = (villager.getRandom().nextDouble() - 0.5) * 0.5;
-            double oy = villager.getRandom().nextDouble() * 1.5;
-            double oz = (villager.getRandom().nextDouble() - 0.5) * 0.5;
+            double ox = (villager.getRandom().nextDouble() - 0.5) * 0.6;
+            double oy = villager.getRandom().nextDouble() * 1.8;
+            double oz = (villager.getRandom().nextDouble() - 0.5) * 0.6;
             serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
                 villager.getX() + ox, villager.getY() + oy, villager.getZ() + oz,
                 1, 0.0, 0.1, 0.0, 0.0);
         }
+        for (int i = 0; i < 12; i++) {
+            double ox = (villager.getRandom().nextDouble() - 0.5) * 1.2;
+            double oy = 0.4 + villager.getRandom().nextDouble() * 1.6;
+            double oz = (villager.getRandom().nextDouble() - 0.5) * 1.2;
+            serverLevel.sendParticles(ParticleTypes.ENCHANT,
+                villager.getX() + ox, villager.getY() + oy, villager.getZ() + oz,
+                1, 0.0, -0.2, 0.0, 0.6);
+        }
+
+        String professionId = villager.getVillagerData().profession().toString();
+        var work = tradeschool$workSound(professionId);
+        if (work != null) {
+            serverLevel.playSound(null, villager.blockPosition(), work, SoundSource.NEUTRAL, 1.0f, 1.0f);
+        }
         serverLevel.playSound(null, villager.blockPosition(),
-            SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.0f, 1.0f);
-        serverLevel.playSound(null, villager.blockPosition(),
-            SoundEvents.PLAYER_LEVELUP, SoundSource.NEUTRAL, 0.5f, 1.5f);
+            SoundEvents.VILLAGER_CELEBRATE, SoundSource.NEUTRAL, 1.0f, 1.0f);
     }
 
     @Unique
@@ -250,16 +476,51 @@ public abstract class AbstractVillagerTeachMixin {
         });
     }
 
+    /**
+     * Tells the player who did the teaching.
+     *
+     * Replaces an earlier broadcast to everyone within 16 blocks. That could not be
+     * translated — one literal string went to every recipient regardless of their
+     * language — and it was telling bystanders about a lesson they had no part in. Every
+     * message sent this way is the outcome of a trade one player just made, so it belongs
+     * to that player.
+     */
     @Unique
-    private void tradeschool$sendNearbyMessage(Villager villager, String text) {
-        Constants.LOGGER.info(text);
+    private void tradeschool$tellTeacher(Villager villager, String key, Object... args) {
         if (!(villager.level() instanceof ServerLevel serverLevel)) return;
-        net.minecraft.network.chat.Component msg = net.minecraft.network.chat.Component.literal(text);
-        serverLevel.getPlayers(player -> {
-            if (player instanceof ServerPlayer sp && sp.distanceToSqr(villager) <= 16 * 16)
-                sp.sendSystemMessage(msg);
-            return false;
-        });
+
+        java.util.UUID teacher = ((IVillagerTeachState) villager).tradeschool$getTeachingPlayer();
+        ServerPlayer player = teacher != null
+            ? serverLevel.getServer().getPlayerList().getPlayer(teacher)
+            : null;
+        if (player == null) {
+            // A teach completed by some path that did not record the player; fall back to
+            // whoever is closest rather than saying nothing.
+            player = serverLevel.getNearestPlayer(villager, 16.0) instanceof ServerPlayer sp ? sp : null;
+        }
+        if (player == null) return;
+
+        var msg = cx.gid.minecraft.tradeschool.TradeSchoolMessages.of(player, key, args);
+        Constants.debug(msg.getString());
+        if (cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
+                .getConfig().global.feedback.chat) {
+            player.sendSystemMessage(msg);
+        }
+        tradeschool$indicateSpeaker(villager);
+    }
+
+    /**
+     * Particles and a mumble from the villager that just spoke, so it is clear which one
+     * meant it. Skipped where a louder effect already plays, such as a successful lesson.
+     */
+    @Unique
+    private void tradeschool$indicateSpeaker(Villager villager) {
+        if (!(villager.level() instanceof ServerLevel serverLevel)) return;
+        serverLevel.sendParticles(ParticleTypes.HAPPY_VILLAGER,
+            villager.getX(), villager.getY() + villager.getBbHeight() + 0.4, villager.getZ(),
+            6, 0.25, 0.15, 0.25, 0.0);
+        serverLevel.playSound(null, villager.blockPosition(),
+            SoundEvents.VILLAGER_AMBIENT, SoundSource.NEUTRAL, 0.7f, 1.0f);
     }
 
     @Unique

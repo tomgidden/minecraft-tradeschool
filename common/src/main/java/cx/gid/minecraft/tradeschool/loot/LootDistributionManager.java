@@ -158,7 +158,7 @@ public class LootDistributionManager {
             return;
         }
 
-        Constants.LOGGER.info("Modifying loot table: {} (tier: {}, rolls: {})",
+        Constants.debug("Modifying loot table: {} (tier: {}, rolls: {})",
             lootTableId, config.tier, config.rollsPerChest);
 
         LootPool.Builder poolBuilder = buildPoolBuilder(lootTableId, config, registries);
@@ -169,7 +169,44 @@ public class LootDistributionManager {
     }
 
     /**
-     * Gets the tier for a loot table (used by Fabric handler to apply curse to existing pools).
+     * Whether this loot table should be touched at all.
+     *
+     * Both loaders must gate on exactly the same conditions or the same world seed yields
+     * different loot on Fabric and NeoForge. The checks therefore live here rather than in
+     * each loader's event handler, where they previously drifted apart.
+     *
+     * Only vanilla tables are touched, identified by namespace. NeoForge's
+     * LootTableLoadEvent carries no origin flag equivalent to Fabric's
+     * LootTableSource#isBuiltin, so the namespace is the one signal both loaders can read
+     * identically — and it is the signal that actually matters here, since the intent is
+     * to leave other mods' and datapacks' loot alone.
+     */
+    public boolean shouldModifyLootTable(String lootTableId) {
+        if (!initialized) return false;
+        if (!getConfig().global.enabled) return false;
+        return lootTableId.startsWith("minecraft:");
+    }
+
+    /**
+     * Whether the Curse of Copyright should be applied to items from this loot table.
+     *
+     * Deliberately flat across every found-loot source regardless of rarity or value, so
+     * the rule stays explainable: one in ten of what you find is copyrighted.
+     *
+     * Excluded by omission: block drops (a player breaking their own enchanted item's
+     * container is not finding treasure), mob drops and spawn equipment under
+     * {@code entities/} and {@code equipment/} — cursing those would let players farm the
+     * curse from a spawner — and shearing, harvest, and dispenser tables, which cannot
+     * yield enchanted items at all.
+     *
+     * Callers must have cleared {@link #shouldModifyLootTable} first.
+     */
+    public boolean shouldCurseLootTable(String lootTableId) {
+        return getConfig().global.foundLootPrefixes.stream().anyMatch(lootTableId::startsWith);
+    }
+
+    /**
+     * Gets the tier for a loot table (used to size injected enchantment levels).
      */
     public StructureTier getTierForLootTable(String lootTableId) {
         StructureConfig config = lootConfig.getStructure(lootTableId);
@@ -195,7 +232,7 @@ public class LootDistributionManager {
             return;
         }
 
-        Constants.LOGGER.info("Modifying loot table: {} (tier: {}, rolls: {})",
+        Constants.debug("Modifying loot table: {} (tier: {}, rolls: {})",
             lootTableId, config.tier, config.rollsPerChest);
 
         LootPool.Builder gearPool = buildGearPoolBuilder(lootTableId, registries);
@@ -278,7 +315,7 @@ public class LootDistributionManager {
                         .setWeight(weight)
                         .apply(SetComponentsFunction.setComponent(DataComponents.STORED_ENCHANTMENTS,
                             storedEnchantments.toImmutable()))
-                        .apply(ApplyCurseOfCopyrightFunction.applyCurse(tier))
+                        .apply(ApplyCurseOfCopyrightFunction.applyCurse())
                     );
                 } catch (Exception e) {
                     Constants.LOGGER.error("Failed to add loot entry for enchantment {} level {}",
@@ -292,7 +329,7 @@ public class LootDistributionManager {
 
         totalEnchantmentEntries += entriesAdded;
 
-        Constants.LOGGER.info("Added {} enchanted book entries to {} ({} unique enchantments, max level {})",
+        Constants.debug("Added {} enchanted book entries to {} ({} unique enchantments, max level {})",
             entriesAdded, lootTableId, enchantments.size(), maxLevel);
 
         return poolBuilder;

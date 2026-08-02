@@ -15,7 +15,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * 2. In-memory cache for performance
  */
 public class VillagerKnowledgeManager {
-    private static final String DATA_KEY = "tradeschool_data";
+    /**
+     * Where the data sits inside the villager's persistent tag.
+     *
+     * The mixin already namespaces this under "TradeSchool", so the old inner
+     * "tradeschool_data" compound was a second level of nesting saying the same thing.
+     * {@link #LEGACY_DATA_KEY} is still read so villagers saved by 26.0.1 load.
+     */
+    private static final String LEGACY_DATA_KEY = "tradeschool_data";
 
     // Cache of villager knowledge, keyed by entity UUID
     private final Map<UUID, VillagerKnowledgeData> knowledgeCache = new ConcurrentHashMap<>();
@@ -50,12 +57,16 @@ public class VillagerKnowledgeManager {
 
         // Try to load from entity NBT
         CompoundTag persistentData = getPersistentData(villager);
-        CompoundTag dataTag = persistentData.getCompound(DATA_KEY).orElse(null);
+        // Prefer the flat layout; fall back to the nested one written by 26.0.1.
+        CompoundTag dataTag = persistentData.contains("LearnedItems")
+            ? persistentData
+            : persistentData.getCompound(LEGACY_DATA_KEY).orElse(null);
         if (dataTag != null && !dataTag.isEmpty()) {
             try {
                 VillagerKnowledgeData data = VillagerKnowledgeData.fromNbt(
                         dataTag,
-                        villager.registryAccess()
+                        villager.registryAccess(),
+                        uuid
                 );
                 knowledgeCache.put(uuid, data);
                 return data;
@@ -81,7 +92,10 @@ public class VillagerKnowledgeManager {
     public void saveData(Villager villager, VillagerKnowledgeData data) {
         try {
             CompoundTag persistentData = getPersistentData(villager);
-            persistentData.put(DATA_KEY, data.toNbt(villager.registryAccess()));
+            // Written flat; drop any nested tag left by an older version so the two
+            // cannot drift apart.
+            persistentData.remove(LEGACY_DATA_KEY);
+            persistentData.merge(data.toNbt(villager.registryAccess()));
             knowledgeCache.put(villager.getUUID(), data);
         } catch (Exception e) {
             Constants.LOGGER.error("Failed to save villager knowledge data for UUID {}", villager.getUUID(), e);

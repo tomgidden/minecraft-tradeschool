@@ -20,8 +20,13 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 import java.util.List;
 
 /**
- * Loot item function that applies Curse of Copyright to enchanted books/items
- * based on structure tier probability. Applied dynamically at loot generation time.
+ * Loot item function that applies Curse of Copyright to enchanted books/items at a flat
+ * probability. Applied dynamically at loot generation time.
+ *
+ * The {@code tier} field is vestigial: the curse rate used to vary by structure tier and
+ * is now flat (see {@link CurseConfig}). It is retained because it is a serialized codec
+ * field, so dropping it would invalidate existing datapack-encoded functions. Prefer
+ * {@link #applyCurse()} for new call sites.
  */
 public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
     public static final MapCodec<ApplyCurseOfCopyrightFunction> CODEC = RecordCodecBuilder.mapCodec(
@@ -89,7 +94,7 @@ public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
                 stack.set(DataComponents.ENCHANTMENTS, mutable.toImmutable());
             }
 
-            Constants.LOGGER.info("Applied Curse of Copyright to {} (tier: {}, probability: {}%, rolled: {})",
+            Constants.debug("Applied Curse of Copyright to {} (tier: {}, probability: {}%, rolled: {})",
                 stack.getItem(), tier, probability * 100, roll);
 
         } catch (Exception e) {
@@ -100,8 +105,19 @@ public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
     }
 
     /**
-     * Creates a new function instance with the given tier.
+     * Creates a new function instance. The curse rate is flat, so no tier is needed.
      */
+    public static LootItemConditionalFunction.Builder<?> applyCurse() {
+        return applyCurse(StructureTier.MEDIUM);
+    }
+
+    /**
+     * Creates a new function instance carrying the given tier.
+     *
+     * @deprecated The tier no longer affects the curse rate; use {@link #applyCurse()}.
+     *     Retained for the codec, which still round-trips the field.
+     */
+    @Deprecated
     public static LootItemConditionalFunction.Builder<?> applyCurse(StructureTier tier) {
         return simpleBuilder(conditions -> new ApplyCurseOfCopyrightFunction(conditions, tier));
     }

@@ -44,7 +44,7 @@ public abstract class MerchantResultSlotMixin {
         // Debug: log submitted item
         ItemEnchantments enchs = submitted.getOrDefault(DataComponents.ENCHANTMENTS, ItemEnchantments.EMPTY);
         if (enchs.isEmpty()) enchs = submitted.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
-        Constants.LOGGER.info("[TradeSchool] Trade submitted: item={} enchants={} damage={} repair_cost={}",
+        Constants.debug("[TradeSchool] Trade submitted: item={} enchants={} damage={} repair_cost={}",
             submitted.getItem(), enchs, submittedDamage, submittedRepairCost);
 
         // If the result is the same item type as the submitted item (partial-learn return,
@@ -62,7 +62,7 @@ public abstract class MerchantResultSlotMixin {
             } else {
                 stack.remove(DataComponents.REPAIR_COST);
             }
-            Constants.LOGGER.info("[TradeSchool] Result item damage/repair_cost corrected to match submitted: damage={} repair_cost={}",
+            Constants.debug("[TradeSchool] Result item damage/repair_cost corrected to match submitted: damage={} repair_cost={}",
                 submittedDamage, submittedRepairCost);
         }
     }

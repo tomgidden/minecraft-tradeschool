@@ -5,9 +5,11 @@ import com.google.gson.JsonObject;
 import com.mojang.serialization.JsonOps;
 import cx.gid.minecraft.tradeschool.Constants;
 import cx.gid.minecraft.tradeschool.loot.LootDistributionManager;
+import cx.gid.minecraft.tradeschool.loot.function.ApplyCurseOfCopyrightFunction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.world.level.storage.loot.LootPool;
 import net.minecraft.world.level.storage.loot.LootTable;
+import net.minecraft.world.level.storage.loot.functions.LootItemFunctions;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.LootTableLoadEvent;
@@ -32,11 +34,21 @@ public class LootTableEventHandler {
         String lootTableId = event.getName().toString();
         HolderLookup.Provider registries = event.getRegistries();
 
+        // Shared gate — keep this identical to the Fabric handler.
+        if (!manager.shouldModifyLootTable(lootTableId)) {
+            return;
+        }
+
         try {
             List<LootPool.Builder> poolsToAdd = new ArrayList<>();
             manager.modifyLootTableWithConsumer(lootTableId, poolsToAdd::add, registries);
 
-            if (poolsToAdd.isEmpty()) {
+            // Curse the table's existing vanilla pools, matching what the Fabric handler
+            // does via modifyPools. Without this, vanilla gear and books found on NeoForge
+            // would never carry the curse.
+            boolean curseExisting = manager.shouldCurseLootTable(lootTableId);
+
+            if (poolsToAdd.isEmpty() && !curseExisting) {
                 return;
             }
 
@@ -53,6 +65,27 @@ public class LootTableEventHandler {
             JsonArray pools = tableJson.has("pools")
                 ? tableJson.getAsJsonArray("pools")
                 : new JsonArray();
+
+            // Attach the curse function to every pre-existing pool. Done before the mod's
+            // own pools are appended, since those already carry the function themselves.
+            if (curseExisting) {
+                var curseEncoded = ApplyCurseOfCopyrightFunction.applyCurse().build();
+                var curseJson = LootItemFunctions.ROOT_CODEC.encodeStart(ops, curseEncoded);
+                if (curseJson.isError()) {
+                    Constants.LOGGER.error("Failed to encode curse function for {}: {}",
+                        lootTableId, curseJson.error());
+                } else {
+                    for (var poolElement : pools) {
+                        JsonObject poolJson = poolElement.getAsJsonObject();
+                        JsonArray functions = poolJson.has("functions")
+                            ? poolJson.getAsJsonArray("functions")
+                            : new JsonArray();
+                        functions.add(curseJson.getOrThrow());
+                        poolJson.add("functions", functions);
+                    }
+                    Constants.LOGGER.debug("Applied curse function to existing pools in {}", lootTableId);
+                }
+            }
 
             // Encode and append each custom pool
             for (LootPool.Builder poolBuilder : poolsToAdd) {
@@ -76,7 +109,14 @@ public class LootTableEventHandler {
             }
 
             event.setTable(rebuilt.getOrThrow());
-            Constants.LOGGER.info("Modified loot table {} with {} custom pool(s)", lootTableId, poolsToAdd.size());
+            // Info only when pools were actually injected; the curse-only case applies to
+            // every found-loot table and would otherwise flood the log at startup.
+            if (poolsToAdd.isEmpty()) {
+                Constants.LOGGER.debug("Applied curse function to loot table {}", lootTableId);
+            } else {
+                Constants.debug("Modified loot table {} with {} custom pool(s)",
+                    lootTableId, poolsToAdd.size());
+            }
 
         } catch (Exception e) {
             Constants.LOGGER.error("Failed to modify loot table {}", lootTableId, e);

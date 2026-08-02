@@ -36,60 +36,66 @@ public class LearnedTradeFactory {
             return null;
         }
 
-        // Use the stored enchantment level (fixed at time of learning)
-        int offeredLevel = enchantmentKnowledge.getEnchantmentLevel();
+        // The book carries every enchantment the villager learned from the original, at
+        // the levels fixed when they learned them.
+        var learned = enchantmentKnowledge.getEnchantments();
+        if (learned.isEmpty()) return null;
 
-        // Create enchanted book with the stored level
-        ItemStack enchantedBook = createEnchantedBook(
-            enchantmentKnowledge.getEnchantment(),
-            offeredLevel
-        );
+        ItemStack enchantedBook = createEnchantedBook(learned);
 
-        // Calculate emerald cost based on enchantment and level
-        int emeraldCost = calculateEmeraldCost(
-            enchantmentKnowledge.getEnchantment(),
-            offeredLevel
-        );
+        // Priced on the dearest enchantment, plus a little for each extra: a book with two
+        // useful enchantments is worth more than either alone, but charging the full price
+        // of both would make multi-enchantment books worse value than buying separately.
+        int emeraldCost = 0;
+        for (var entry : learned.entrySet()) {
+            int one = calculateEmeraldCost(entry.getKey(), entry.getValue());
+            emeraldCost = Math.max(emeraldCost, one) + (emeraldCost > 0 ? one / 2 : 0);
+        }
+        emeraldCost = Math.max(5, Math.min(64, emeraldCost));
 
         // Create the trade offer
         // Format: Player pays emeralds → Gets enchanted book
         return new MerchantOffer(
                 new ItemCost(Items.EMERALD, emeraldCost),  // What player pays
                 enchantedBook,                              // What player gets
-                12,                                         // Max uses before needing to restock
+                config().learnedTradeMaxUses,               // Max uses before needing to restock
                 5,                                          // Villager XP gained
                 0.05F                                       // Price multiplier
         );
     }
 
+    private static cx.gid.minecraft.tradeschool.loot.config.TradeConfig config() {
+        return cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
+            .getConfig().global.trade;
+    }
+
     /** Public estimate used to compute the emerald payment when a book is picked up. */
     public static int estimateBookPrice(Holder<Enchantment> enchantment, int level) {
-        int maxCost = enchantment.value().getMaxCost(level);
-        int baseCost = maxCost <= 20 ? 5 : maxCost <= 30 ? 10 : maxCost <= 40 ? 15 : 20;
-        return Math.max(5, Math.min(64, baseCost + (level - 1) * 5));
+        return calculateEmeraldCost(enchantment, level);
     }
 
     /**
      * Calculates emerald cost based on enchantment rarity and level.
      */
-    private int calculateEmeraldCost(Holder<Enchantment> enchantment, int level) {
+    private static int calculateEmeraldCost(Holder<Enchantment> enchantment, int level) {
+        var cfg = config();
+
         // Base cost varies by rarity
         int maxCost = enchantment.value().getMaxCost(level);
         int baseCost;
 
         if (maxCost <= 20) {
-            baseCost = 5;   // Common enchantments
+            baseCost = cfg.bookPriceCommon;
         } else if (maxCost <= 30) {
-            baseCost = 10;  // Uncommon enchantments
+            baseCost = cfg.bookPriceUncommon;
         } else if (maxCost <= 40) {
-            baseCost = 15;  // Rare enchantments
+            baseCost = cfg.bookPriceRare;
         } else {
-            baseCost = 20;  // Very rare enchantments
+            baseCost = cfg.bookPriceVeryRare;
         }
 
         // Add cost per level (higher levels cost more)
-        int levelMultiplier = (level - 1) * 5;
-        int finalCost = baseCost + levelMultiplier;
+        int finalCost = baseCost + (level - 1) * cfg.bookPricePerLevel;
 
         // Clamp to reasonable range (5-64 emeralds)
         return Math.max(5, Math.min(64, finalCost));
@@ -98,15 +104,11 @@ public class LearnedTradeFactory {
     /**
      * Creates an enchanted book item with the given enchantment and level.
      */
-    private ItemStack createEnchantedBook(Holder<Enchantment> enchantment, int level) {
+    private ItemStack createEnchantedBook(java.util.Map<Holder<Enchantment>, Integer> learned) {
         ItemStack book = new ItemStack(Items.ENCHANTED_BOOK);
-
-        // Use ItemEnchantments to properly set stored enchantments
         ItemEnchantments.Mutable enchantments = new ItemEnchantments.Mutable(ItemEnchantments.EMPTY);
-        enchantments.set(enchantment, level);
-
+        learned.forEach(enchantments::set);
         book.set(DataComponents.STORED_ENCHANTMENTS, enchantments.toImmutable());
-
         return book;
     }
 }

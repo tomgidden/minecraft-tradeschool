@@ -104,7 +104,7 @@ public class ItemTeachingTradeFactory {
         if (knowledge.teachItem(professionId, professionLevel, itemKnowledge)) {
             VillagerKnowledgeManager.getInstance().saveData(villager, knowledge);
 
-            Constants.LOGGER.info("Villager {} learned item {} at level {} with {} enchantments",
+            Constants.debug("Villager {} learned item {} at level {} with {} enchantments",
                     villager.getUUID(),
                     tradedItem.getItem(),
                     professionLevel,

@@ -36,7 +36,7 @@ public class LearnedItemTradeFactory {
         // Create the enchanted item from knowledge
         ItemStack offeredItem = itemKnowledge.createItemStack();
 
-        Constants.LOGGER.info("LearnedItemTrade: offering {} with {} enchantments for {} emeralds (baseItem={})",
+        Constants.debug("LearnedItemTrade: offering {} with {} enchantments for {} emeralds (baseItem={})",
             offeredItem.getItem(), offeredItem.getEnchantments().size(),
             ItemPricingCalculator.calculateSellingPrice(itemKnowledge),
             itemKnowledge.getBaseItem().unwrapKey().map(k -> k.toString()).orElse("?"));
