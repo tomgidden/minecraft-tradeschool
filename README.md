@@ -173,6 +173,14 @@ I've implemented a basic mod to demonstrate this idea, called "Trade School" /
 "tradeschool". It's just a proof-of-concept for Minecraft (Java) 26+ at
 this stage, as I've little experience writing Minecraft mods.
 
+## Similar Projects
+
+Since implementing this I found a datapack written a few years ago that
+works along similar lines but in a different way: **"Librarian's Balance"**
+
+- [[https://github.com/mistrk7/librarians-balance]]
+- [[https://modrinth.com/datapack/librarians-balance]]
+
 ## License and stuff
 
 This mod is covered by the [MIT License](LICENSE.txt).
@@ -180,7 +188,7 @@ This mod is covered by the [MIT License](LICENSE.txt).
 In short, you may freely use this mod in any modpack, but just don't claim you
 made the mod and then sue me for copyright!
 
-The idea's public-domain, and I'm sure others have come up with the same. No 
+The idea's public-domain, and I'm sure others have come up with the same. No
 promises, no warranties, so don't blame me if it breaks anything or disadvantages
 you in some way, or you believe it did.
 

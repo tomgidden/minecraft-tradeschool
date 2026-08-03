@@ -3,7 +3,7 @@
   "id": "${mod_id}",
   "version": "${version}",
   "name": "${mod_name}",
-  "description": "Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items - they'll learn and resell what you teach! Pre-alpha development build.",
+  "description": "Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items - they'll learn and resell what you teach!",
   "authors": [
     "_gid"
   ],
