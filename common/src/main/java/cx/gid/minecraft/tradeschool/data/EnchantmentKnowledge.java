@@ -13,24 +13,22 @@ import net.minecraft.world.item.enchantment.Enchantment;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * One lesson a librarian has learned: the enchantments from a single book.
- *
- * A book may carry several enchantments, and the villager learns all of them that it is
- * capable of learning — earlier versions kept only one, arbitrarily chosen, which quietly
- * discarded the rest of a Protection + Unbreaking book.
- *
- * Order is preserved ({@link LinkedHashMap}) so the villager's trade lists its
- * enchantments the same way every time. A {@code HashMap} here made the order shift
- * between openings, which matters more than it sounds: a player hunting for the right book
- * in a full inventory is matching on the name.
- */
+/// One lesson a librarian has learned: the enchantments from a single book.
+///
+/// A book may carry several enchantments, and the villager learns all of them that it is
+/// capable of learning — earlier versions kept only one, arbitrarily chosen, which quietly
+/// discarded the rest of a Protection + Unbreaking book.
+///
+/// Order is preserved ([LinkedHashMap]) so the villager's trade lists its
+/// enchantments the same way every time. A `HashMap` here made the order shift
+/// between openings, which matters more than it sounds: a player hunting for the right book
+/// in a full inventory is matching on the name.
 public class EnchantmentKnowledge {
 
-    /** Enchantment to level, in the order they were learned. */
+        ///  Enchantment to level, in the order they were learned.
     private final Map<Holder<Enchantment>, Integer> enchantments;
 
-    /** The villager's profession level (1–5) when this was taught. */
+        ///  The villager's profession level (1–5) when this was taught.
     private final int learnedAtLevel;
 
     public EnchantmentKnowledge(Map<Holder<Enchantment>, Integer> enchantments, int learnedAtLevel) {
@@ -38,7 +36,7 @@ public class EnchantmentKnowledge {
         this.learnedAtLevel = learnedAtLevel;
     }
 
-    /** Convenience for a single-enchantment lesson. */
+        ///  Convenience for a single-enchantment lesson.
     public EnchantmentKnowledge(Holder<Enchantment> enchantment, int learnedAtLevel, int enchantmentLevel) {
         this(Map.of(enchantment, enchantmentLevel), learnedAtLevel);
     }
@@ -47,11 +45,9 @@ public class EnchantmentKnowledge {
         return enchantments;
     }
 
-    /**
-     * The first enchantment learned, for callers that can only show one.
-     *
-     * @deprecated Prefer {@link #getEnchantments()}; this loses everything after the first.
-     */
+        /// The first enchantment learned, for callers that can only show one.
+    ///
+    /// @deprecated Prefer [#getEnchantments()]; this loses everything after the first.
     @Deprecated
     public Holder<Enchantment> getEnchantment() {
         return enchantments.keySet().iterator().next();
@@ -61,18 +57,16 @@ public class EnchantmentKnowledge {
         return learnedAtLevel;
     }
 
-    /**
-     * The stored level of the first enchantment. Fixed when learned, so levelling the
-     * villager up does not retroactively improve an old lesson.
-     *
-     * @deprecated Prefer {@link #getEnchantments()}.
-     */
+        /// The stored level of the first enchantment. Fixed when learned, so levelling the
+    /// villager up does not retroactively improve an old lesson.
+    ///
+    /// @deprecated Prefer [#getEnchantments()].
     @Deprecated
     public int getEnchantmentLevel() {
         return enchantments.values().iterator().next();
     }
 
-    /** True if this lesson already covers the same enchantments at the same levels. */
+        ///  True if this lesson already covers the same enchantments at the same levels.
     public boolean matches(Map<Holder<Enchantment>, Integer> other) {
         return enchantments.equals(other);
     }
@@ -95,11 +89,9 @@ public class EnchantmentKnowledge {
         return nbt;
     }
 
-    /**
-     * Reads a lesson, accepting both the current list form and the single-enchantment
-     * form written before multi-enchantment books were supported. Villagers taught by an
-     * older build therefore keep what they knew rather than losing it on upgrade.
-     */
+        /// Reads a lesson, accepting both the current list form and the single-enchantment
+    /// form written before multi-enchantment books were supported. Villagers taught by an
+    /// older build therefore keep what they knew rather than losing it on upgrade.
     public static EnchantmentKnowledge fromNbt(CompoundTag nbt, HolderLookup.Provider registryAccess) {
         int learnedAtLevel = nbt.getInt("LearnedAtLevel").orElse(1);
         var registry = registryAccess.lookupOrThrow(Registries.ENCHANTMENT);

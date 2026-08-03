@@ -7,9 +7,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.storage.loot.functions.LootItemFunction;
 
-/**
- * Registry for custom loot item functions.
- */
+/// Registry for custom loot item functions.
 public class ModLootFunctions {
     public static MapCodec<ApplyCurseOfCopyrightFunction> APPLY_CURSE_OF_COPYRIGHT;
 

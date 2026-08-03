@@ -1,65 +1,12 @@
 {
+  "//": "Loot table data: which enchantments appear where, and at what level. This is bundled data, not settings \u2014 operator-tunable behaviour lives in config/tradeschool.json. Override this with a datapack rather than editing the jar.",
   "version": 1,
-  "global": {
-    "enabled": true,
-    "debug_logging": false,
-    "default_tier_max_levels": {
-      "LOW": 2,
-      "MEDIUM": 3,
-      "HIGH": 4,
-      "TOP": 5
-    },
-    "default_crossover_chance": 0.05,
-    "unlearnable_enchantments": [
-      "minecraft:soul_speed",
-      "minecraft:swift_sneak",
-      "minecraft:wind_burst"
-    ],
-    "curse_probability": 0.1,
-    "found_loot_prefixes": [
-      "minecraft:chests/",
-      "minecraft:archaeology/",
-      "minecraft:gameplay/fishing"
-    ],
-    "feedback": {
-      "_comment": "Which channels player-facing messages use. The action bar is off by default: it cannot be held on screen long enough to read a sentence, so those messages belong in chat where they can be re-read.",
-      "chat": true,
-      "action_bar": false,
-      "title": true,
-      "title_fade_in_ticks": 5,
-      "title_stay_ticks": 80,
-      "title_fade_out_ticks": 20
-    },
-    "reputation": {
-      "minor_positive_per_teach": 5,
-      "major_positive_per_teach": 0
-    },
-    "trade": {
-      "curse_book_required_level": 5,
-      "curse_book_availability": 0.5,
-      "curse_book_emerald_cost": 1,
-      "full_learn_payment_divisor": 2,
-      "teach_xp_multiplier": 1.0,
-      "book_price_common": 5,
-      "book_price_uncommon": 10,
-      "book_price_rare": 15,
-      "book_price_very_rare": 20,
-      "book_price_per_level": 5,
-      "learned_trade_max_uses": 12,
-      "single_level_enchantment_min_villager_level": 3,
-      "max_teach_offers": 6,
-      "teach_preview_radius": 5.0,
-      "hint_radius": 8.0,
-      "_fillers_comment": "Commodity buy trades filling profession levels left empty by removing teachable items — without them an untaught smith has nothing to trade and can never gain the XP to reach the level where teaching unlocks.",
-      "fillers": [
-        { "profession": "armorer",     "level": 1, "material": "minecraft:coal",    "count": 15 },
-        { "profession": "armorer",     "level": 2, "material": "minecraft:leather", "count": 6  },
-        { "profession": "weaponsmith", "level": 1, "material": "minecraft:coal",    "count": 15 },
-        { "profession": "weaponsmith", "level": 2, "material": "minecraft:flint",   "count": 10 },
-        { "profession": "toolsmith",   "level": 1, "material": "minecraft:coal",    "count": 15 },
-        { "profession": "toolsmith",   "level": 2, "material": "minecraft:gravel",  "count": 10 }
-      ]
-    }
+  "//max_enchantment_level_by_tier": "Highest enchantment level a structure of each tier may yield, indexed by the tier named in each structure below. Villages and fishing are LOW and cap at 2, so an early-game chest can hold Sharpness II but never Sharpness V; ancient cities and end cities are TOP and cap at 5. This is what keeps enchantment strength tied to how far the player has travelled, rather than to how many chests they have opened.",
+  "max_enchantment_level_by_tier": {
+    "LOW": 2,
+    "MEDIUM": 3,
+    "HIGH": 4,
+    "TOP": 5
   },
   "categories": {
     "WATER": {
@@ -137,9 +84,13 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.25,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.05 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/village/village_desert_house": {
@@ -147,11 +98,19 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.25,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "NETHER": 0.08, "UTILITY": 0.05 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "NETHER": 0.08,
+        "UTILITY": 0.05
+      },
       "custom_enchantments": {
-        "minecraft:fire_protection": { "weight": 15, "max_level": 2 }
+        "minecraft:fire_protection": {
+          "weight": 15,
+          "max_level": 2
+        }
       }
     },
     "minecraft:chests/village/village_savanna_house": {
@@ -159,9 +118,13 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.25,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.05 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/village/village_snowy_house": {
@@ -169,11 +132,18 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.25,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.05 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
       "custom_enchantments": {
-        "minecraft:frost_walker": { "weight": 12, "max_level": 2 }
+        "minecraft:frost_walker": {
+          "weight": 12,
+          "max_level": 2
+        }
       }
     },
     "minecraft:chests/village/village_taiga_house": {
@@ -181,22 +151,36 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.25,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.05 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/shipwreck_treasure": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.60,
-      "remove_vanilla_books": true,
-      "primary_categories": ["WATER"],
-      "crossover_categories": { "UTILITY": 0.1, "COMBAT": 0.05 },
+      "book_chance": 0.6,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.1,
+        "COMBAT": 0.05
+      },
       "custom_enchantments": {
-        "minecraft:depth_strider": { "weight": 20, "max_level": 3 },
-        "minecraft:respiration": { "weight": 18, "max_level": 3 }
+        "minecraft:depth_strider": {
+          "weight": 20,
+          "max_level": 3
+        },
+        "minecraft:respiration": {
+          "weight": 18,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/underwater_ruin_big": {
@@ -204,21 +188,30 @@
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
       "book_chance": 0.45,
-      "remove_vanilla_books": true,
-      "primary_categories": ["WATER"],
-      "crossover_categories": { "UTILITY": 0.08 },
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.08
+      },
       "custom_enchantments": {
-        "minecraft:aqua_affinity": { "weight": 22, "max_level": 1 }
+        "minecraft:aqua_affinity": {
+          "weight": 22,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/underwater_ruin_small": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.30,
-      "remove_vanilla_books": true,
-      "primary_categories": ["WATER"],
-      "crossover_categories": { "UTILITY": 0.05 },
+      "book_chance": 0.3,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/buried_treasure": {
@@ -226,22 +219,36 @@
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["WATER", "UTILITY"],
-      "crossover_categories": { "COMBAT": 0.1 },
+      "primary_categories": [
+        "WATER",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:riptide": { "weight": 18, "max_level": 3 },
-        "minecraft:loyalty": { "weight": 16, "max_level": 3 }
+        "minecraft:riptide": {
+          "weight": 18,
+          "max_level": 3
+        },
+        "minecraft:loyalty": {
+          "weight": 16,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/simple_dungeon": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.40,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.1 },
+      "book_chance": 0.4,
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.1
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/abandoned_mineshaft": {
@@ -249,11 +256,18 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.35,
-      "remove_vanilla_books": true,
-      "primary_categories": ["UTILITY", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.08 },
+      "primary_categories": [
+        "UTILITY",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.08
+      },
       "custom_enchantments": {
-        "minecraft:efficiency": { "weight": 20, "max_level": 2 }
+        "minecraft:efficiency": {
+          "weight": 20,
+          "max_level": 2
+        }
       }
     },
     "minecraft:chests/desert_pyramid": {
@@ -261,12 +275,23 @@
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "PROTECTION"],
-      "crossover_categories": { "COMBAT": 0.12, "UTILITY": 0.08 },
+      "primary_categories": [
+        "NETHER",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.12,
+        "UTILITY": 0.08
+      },
       "custom_enchantments": {
-        "minecraft:fire_protection": { "weight": 25, "max_level": 3 },
-        "minecraft:thorns": { "weight": 18, "max_level": 3 }
+        "minecraft:fire_protection": {
+          "weight": 25,
+          "max_level": 3
+        },
+        "minecraft:thorns": {
+          "weight": 18,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/jungle_temple": {
@@ -274,13 +299,26 @@
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["UTILITY", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.1 },
+      "primary_categories": [
+        "UTILITY",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:efficiency": { "weight": 22, "max_level": 3 },
-        "minecraft:fortune": { "weight": 18, "max_level": 3 },
-        "minecraft:unbreaking": { "weight": 20, "max_level": 3 }
+        "minecraft:efficiency": {
+          "weight": 22,
+          "max_level": 3
+        },
+        "minecraft:fortune": {
+          "weight": 18,
+          "max_level": 3
+        },
+        "minecraft:unbreaking": {
+          "weight": 20,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/igloo_chest": {
@@ -288,38 +326,68 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.35,
-      "remove_vanilla_books": true,
-      "primary_categories": ["PROTECTION"],
-      "crossover_categories": { "COMBAT": 0.1 },
+      "primary_categories": [
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:frost_walker": { "weight": 15, "max_level": 2 }
+        "minecraft:frost_walker": {
+          "weight": 15,
+          "max_level": 2
+        }
       }
     },
     "minecraft:chests/pillager_outpost": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.60,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.15, "UTILITY": 0.08 },
+      "book_chance": 0.6,
+      "primary_categories": [
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.15,
+        "UTILITY": 0.08
+      },
       "custom_enchantments": {
-        "minecraft:power": { "weight": 20, "max_level": 3 },
-        "minecraft:piercing": { "weight": 18, "max_level": 3 },
-        "minecraft:multishot": { "weight": 15, "max_level": 1 }
+        "minecraft:power": {
+          "weight": 20,
+          "max_level": 3
+        },
+        "minecraft:piercing": {
+          "weight": 18,
+          "max_level": 3
+        },
+        "minecraft:multishot": {
+          "weight": 15,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/ruined_portal": {
       "enabled": true,
       "tier": "HIGH",
       "rolls_per_chest": 1,
-      "book_chance": 0.50,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.15, "UTILITY": 0.1 },
+      "book_chance": 0.5,
+      "primary_categories": [
+        "NETHER",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.15,
+        "UTILITY": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:fire_aspect": { "weight": 22, "max_level": 2 },
-        "minecraft:flame": { "weight": 20, "max_level": 1 }
+        "minecraft:fire_aspect": {
+          "weight": 22,
+          "max_level": 2
+        },
+        "minecraft:flame": {
+          "weight": 20,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/stronghold_library": {
@@ -327,13 +395,27 @@
       "tier": "HIGH",
       "rolls_per_chest": 2,
       "book_chance": 0.65,
-      "remove_vanilla_books": true,
-      "primary_categories": ["UTILITY", "RARE"],
-      "crossover_categories": { "COMBAT": 0.15, "PROTECTION": 0.15 },
+      "primary_categories": [
+        "UTILITY",
+        "RARE"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.15,
+        "PROTECTION": 0.15
+      },
       "custom_enchantments": {
-        "minecraft:mending": { "weight": 8, "max_level": 1 },
-        "minecraft:unbreaking": { "weight": 25, "max_level": 3 },
-        "minecraft:fortune": { "weight": 20, "max_level": 3 }
+        "minecraft:mending": {
+          "weight": 8,
+          "max_level": 1
+        },
+        "minecraft:unbreaking": {
+          "weight": 25,
+          "max_level": 3
+        },
+        "minecraft:fortune": {
+          "weight": 20,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/stronghold_corridor": {
@@ -341,9 +423,13 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.12 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.12
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/stronghold_crossing": {
@@ -351,23 +437,41 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.12 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.12
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/nether_bridge": {
       "enabled": true,
       "tier": "HIGH",
       "rolls_per_chest": 1,
-      "book_chance": 0.70,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.15, "UTILITY": 0.08 },
+      "book_chance": 0.7,
+      "primary_categories": [
+        "NETHER",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.15,
+        "UTILITY": 0.08
+      },
       "custom_enchantments": {
-        "minecraft:fire_aspect": { "weight": 22, "max_level": 2 },
-        "minecraft:flame": { "weight": 20, "max_level": 1 },
-        "minecraft:soul_speed": { "weight": 18, "max_level": 3 }
+        "minecraft:fire_aspect": {
+          "weight": 22,
+          "max_level": 2
+        },
+        "minecraft:flame": {
+          "weight": 20,
+          "max_level": 1
+        },
+        "minecraft:soul_speed": {
+          "weight": 18,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/bastion_treasure": {
@@ -375,22 +479,37 @@
       "tier": "HIGH",
       "rolls_per_chest": 2,
       "book_chance": 0.45,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.2, "UTILITY": 0.1 },
+      "primary_categories": [
+        "NETHER",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.2,
+        "UTILITY": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:soul_speed": { "weight": 25, "max_level": 3 },
-        "minecraft:looting": { "weight": 20, "max_level": 3 }
+        "minecraft:soul_speed": {
+          "weight": 25,
+          "max_level": 3
+        },
+        "minecraft:looting": {
+          "weight": 20,
+          "max_level": 3
+        }
       }
     },
     "minecraft:chests/bastion_hoglin_stable": {
       "enabled": true,
       "tier": "HIGH",
       "rolls_per_chest": 1,
-      "book_chance": 0.60,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.12 },
+      "book_chance": 0.6,
+      "primary_categories": [
+        "NETHER",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.12
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/bastion_bridge": {
@@ -398,9 +517,13 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.65,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.12 },
+      "primary_categories": [
+        "NETHER",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.12
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/bastion_other": {
@@ -408,22 +531,38 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.12, "UTILITY": 0.08 },
+      "primary_categories": [
+        "NETHER",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.12,
+        "UTILITY": 0.08
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/woodland_mansion": {
       "enabled": true,
       "tier": "HIGH",
       "rolls_per_chest": 1,
-      "book_chance": 0.60,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "UTILITY"],
-      "crossover_categories": { "PROTECTION": 0.15, "RARE": 0.05 },
+      "book_chance": 0.6,
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.15,
+        "RARE": 0.05
+      },
       "custom_enchantments": {
-        "minecraft:sharpness": { "weight": 22, "max_level": 4 },
-        "minecraft:efficiency": { "weight": 20, "max_level": 4 }
+        "minecraft:sharpness": {
+          "weight": 22,
+          "max_level": 4
+        },
+        "minecraft:efficiency": {
+          "weight": 20,
+          "max_level": 4
+        }
       }
     },
     "minecraft:chests/end_city_treasure": {
@@ -431,41 +570,81 @@
       "tier": "TOP",
       "rolls_per_chest": 2,
       "book_chance": 0.55,
-      "remove_vanilla_books": true,
-      "primary_categories": ["RARE", "UTILITY"],
-      "crossover_categories": { "COMBAT": 0.2, "PROTECTION": 0.15 },
+      "primary_categories": [
+        "RARE",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.2,
+        "PROTECTION": 0.15
+      },
       "custom_enchantments": {
-        "minecraft:mending": { "weight": 25, "max_level": 1 },
-        "minecraft:unbreaking": { "weight": 20, "max_level": 3 },
-        "minecraft:sharpness": { "weight": 18, "max_level": 5 },
-        "minecraft:protection": { "weight": 18, "max_level": 4 }
+        "minecraft:mending": {
+          "weight": 25,
+          "max_level": 1
+        },
+        "minecraft:unbreaking": {
+          "weight": 20,
+          "max_level": 3
+        },
+        "minecraft:sharpness": {
+          "weight": 18,
+          "max_level": 5
+        },
+        "minecraft:protection": {
+          "weight": 18,
+          "max_level": 4
+        }
       }
     },
     "minecraft:chests/ancient_city": {
       "enabled": true,
       "tier": "TOP",
       "rolls_per_chest": 2,
-      "book_chance": 0.70,
-      "remove_vanilla_books": true,
-      "primary_categories": ["RARE"],
-      "crossover_categories": { "UTILITY": 0.25, "COMBAT": 0.15, "PROTECTION": 0.15 },
+      "book_chance": 0.7,
+      "primary_categories": [
+        "RARE"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.25,
+        "COMBAT": 0.15,
+        "PROTECTION": 0.15
+      },
       "custom_enchantments": {
-        "minecraft:mending": { "weight": 30, "max_level": 1 },
-        "minecraft:swift_sneak": { "weight": 35, "max_level": 3 },
-        "minecraft:fortune": { "weight": 20, "max_level": 3 },
-        "minecraft:silk_touch": { "weight": 18, "max_level": 1 }
+        "minecraft:mending": {
+          "weight": 30,
+          "max_level": 1
+        },
+        "minecraft:swift_sneak": {
+          "weight": 35,
+          "max_level": 3
+        },
+        "minecraft:fortune": {
+          "weight": 20,
+          "max_level": 3
+        },
+        "minecraft:silk_touch": {
+          "weight": 18,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/ancient_city_ice_box": {
       "enabled": true,
       "tier": "TOP",
       "rolls_per_chest": 1,
-      "book_chance": 0.60,
-      "remove_vanilla_books": true,
-      "primary_categories": ["RARE"],
-      "crossover_categories": { "UTILITY": 0.2 },
+      "book_chance": 0.6,
+      "primary_categories": [
+        "RARE"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.2
+      },
       "custom_enchantments": {
-        "minecraft:swift_sneak": { "weight": 30, "max_level": 3 }
+        "minecraft:swift_sneak": {
+          "weight": 30,
+          "max_level": 3
+        }
       }
     },
     "minecraft:archaeology/desert_well": {
@@ -473,9 +652,12 @@
       "tier": "LOW",
       "rolls_per_chest": 1,
       "book_chance": 0.35,
-      "remove_vanilla_books": true,
-      "primary_categories": ["UTILITY"],
-      "crossover_categories": { "NETHER": 0.1 },
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "NETHER": 0.1
+      },
       "custom_enchantments": {}
     },
     "minecraft:archaeology/desert_pyramid": {
@@ -483,74 +665,125 @@
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
       "book_chance": 0.45,
-      "remove_vanilla_books": true,
-      "primary_categories": ["NETHER", "UTILITY"],
-      "crossover_categories": { "COMBAT": 0.15 },
+      "primary_categories": [
+        "NETHER",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.15
+      },
       "custom_enchantments": {
-        "minecraft:fire_protection": { "weight": 20, "max_level": 3 }
+        "minecraft:fire_protection": {
+          "weight": 20,
+          "max_level": 3
+        }
       }
     },
     "minecraft:archaeology/trail_ruins_common": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.40,
-      "remove_vanilla_books": true,
-      "primary_categories": ["UTILITY", "COMBAT"],
-      "crossover_categories": { "PROTECTION": 0.12 },
+      "book_chance": 0.4,
+      "primary_categories": [
+        "UTILITY",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.12
+      },
       "custom_enchantments": {
-        "minecraft:efficiency": { "weight": 20, "max_level": 3 }
+        "minecraft:efficiency": {
+          "weight": 20,
+          "max_level": 3
+        }
       }
     },
     "minecraft:archaeology/trail_ruins_rare": {
       "enabled": true,
       "tier": "HIGH",
       "rolls_per_chest": 1,
-      "book_chance": 0.70,
-      "remove_vanilla_books": true,
-      "primary_categories": ["UTILITY", "RARE"],
-      "crossover_categories": { "COMBAT": 0.15, "PROTECTION": 0.1 },
+      "book_chance": 0.7,
+      "primary_categories": [
+        "UTILITY",
+        "RARE"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.15,
+        "PROTECTION": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:fortune": { "weight": 22, "max_level": 3 },
-        "minecraft:mending": { "weight": 10, "max_level": 1 }
+        "minecraft:fortune": {
+          "weight": 22,
+          "max_level": 3
+        },
+        "minecraft:mending": {
+          "weight": 10,
+          "max_level": 1
+        }
       }
     },
     "minecraft:archaeology/ocean_ruin_warm": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.50,
-      "remove_vanilla_books": true,
-      "primary_categories": ["WATER"],
-      "crossover_categories": { "UTILITY": 0.1 },
+      "book_chance": 0.5,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:impaling": { "weight": 18, "max_level": 3 }
+        "minecraft:impaling": {
+          "weight": 18,
+          "max_level": 3
+        }
       }
     },
     "minecraft:archaeology/ocean_ruin_cold": {
       "enabled": true,
       "tier": "MEDIUM",
       "rolls_per_chest": 1,
-      "book_chance": 0.50,
-      "remove_vanilla_books": true,
-      "primary_categories": ["WATER"],
-      "crossover_categories": { "UTILITY": 0.1 },
+      "book_chance": 0.5,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.1
+      },
       "custom_enchantments": {
-        "minecraft:channeling": { "weight": 15, "max_level": 1 }
+        "minecraft:channeling": {
+          "weight": 15,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/trial_chambers/reward": {
       "enabled": true,
       "tier": "HIGH",
       "rolls_per_chest": 1,
-      "book_chance": 0.40,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "UTILITY"],
-      "crossover_categories": { "PROTECTION": 0.2, "RARE": 0.08 },
+      "book_chance": 0.4,
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.2,
+        "RARE": 0.08
+      },
       "custom_enchantments": {
-        "minecraft:wind_burst": { "weight": 20, "max_level": 3 },
-        "minecraft:breach": { "weight": 18, "max_level": 4 },
-        "minecraft:density": { "weight": 18, "max_level": 5 }
+        "minecraft:wind_burst": {
+          "weight": 20,
+          "max_level": 3
+        },
+        "minecraft:breach": {
+          "weight": 18,
+          "max_level": 4
+        },
+        "minecraft:density": {
+          "weight": 18,
+          "max_level": 5
+        }
       }
     },
     "minecraft:chests/trial_chambers/reward_rare": {
@@ -558,29 +791,63 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.65,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "UTILITY"],
-      "crossover_categories": { "PROTECTION": 0.2, "RARE": 0.15 },
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.2,
+        "RARE": 0.15
+      },
       "custom_enchantments": {
-        "minecraft:wind_burst": { "weight": 25, "max_level": 3 },
-        "minecraft:breach": { "weight": 22, "max_level": 4 },
-        "minecraft:density": { "weight": 22, "max_level": 5 },
-        "minecraft:mending": { "weight": 12, "max_level": 1 }
+        "minecraft:wind_burst": {
+          "weight": 25,
+          "max_level": 3
+        },
+        "minecraft:breach": {
+          "weight": 22,
+          "max_level": 4
+        },
+        "minecraft:density": {
+          "weight": 22,
+          "max_level": 5
+        },
+        "minecraft:mending": {
+          "weight": 12,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/trial_chambers/reward_ominous_rare": {
       "enabled": true,
       "tier": "TOP",
       "rolls_per_chest": 1,
-      "book_chance": 0.80,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "RARE"],
-      "crossover_categories": { "UTILITY": 0.2, "PROTECTION": 0.15 },
+      "book_chance": 0.8,
+      "primary_categories": [
+        "COMBAT",
+        "RARE"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.2,
+        "PROTECTION": 0.15
+      },
       "custom_enchantments": {
-        "minecraft:wind_burst": { "weight": 30, "max_level": 3 },
-        "minecraft:breach": { "weight": 28, "max_level": 4 },
-        "minecraft:density": { "weight": 28, "max_level": 5 },
-        "minecraft:mending": { "weight": 20, "max_level": 1 }
+        "minecraft:wind_burst": {
+          "weight": 30,
+          "max_level": 3
+        },
+        "minecraft:breach": {
+          "weight": 28,
+          "max_level": 4
+        },
+        "minecraft:density": {
+          "weight": 28,
+          "max_level": 5
+        },
+        "minecraft:mending": {
+          "weight": 20,
+          "max_level": 1
+        }
       }
     },
     "minecraft:chests/trial_chambers/intersection_barrel": {
@@ -588,9 +855,13 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.35,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "UTILITY"],
-      "crossover_categories": { "PROTECTION": 0.15 },
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.15
+      },
       "custom_enchantments": {}
     },
     "minecraft:chests/trial_chambers/corridor": {
@@ -598,9 +869,13 @@
       "tier": "HIGH",
       "rolls_per_chest": 1,
       "book_chance": 0.35,
-      "remove_vanilla_books": true,
-      "primary_categories": ["COMBAT", "PROTECTION"],
-      "crossover_categories": { "UTILITY": 0.12 },
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.12
+      },
       "custom_enchantments": {}
     }
   }

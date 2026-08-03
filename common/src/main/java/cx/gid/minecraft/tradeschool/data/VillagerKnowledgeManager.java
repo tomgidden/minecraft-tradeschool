@@ -8,20 +8,16 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Manages persistent storage of villager knowledge data.
- * Uses a combination of:
- * 1. Entity NBT data (primary storage, travels with villager)
- * 2. In-memory cache for performance
- */
+/// Manages persistent storage of villager knowledge data.
+/// Uses a combination of:
+/// 1. Entity NBT data (primary storage, travels with villager)
+/// 2. In-memory cache for performance
 public class VillagerKnowledgeManager {
-    /**
-     * Where the data sits inside the villager's persistent tag.
-     *
-     * The mixin already namespaces this under "TradeSchool", so the old inner
-     * "tradeschool_data" compound was a second level of nesting saying the same thing.
-     * {@link #LEGACY_DATA_KEY} is still read so villagers saved by 26.0.1 load.
-     */
+        /// Where the data sits inside the villager's persistent tag.
+    ///
+    /// The mixin already namespaces this under "TradeSchool", so the old inner
+    /// "tradeschool_data" compound was a second level of nesting saying the same thing.
+    /// [#LEGACY_DATA_KEY] is still read so villagers saved by 26.0.1 load.
     private static final String LEGACY_DATA_KEY = "tradeschool_data";
 
     // Cache of villager knowledge, keyed by entity UUID
@@ -39,13 +35,11 @@ public class VillagerKnowledgeManager {
         return instance;
     }
 
-    /**
-     * Retrieves or creates knowledge data for a villager.
-     * First checks cache, then entity NBT, then creates new.
-     *
-     * @param villager The villager entity
-     * @return The knowledge data for this villager
-     */
+        /// Retrieves or creates knowledge data for a villager.
+    /// First checks cache, then entity NBT, then creates new.
+    ///
+    /// @param villager The villager entity
+    /// @return The knowledge data for this villager
     public VillagerKnowledgeData getOrCreateData(Villager villager) {
         UUID uuid = villager.getUUID();
 
@@ -83,12 +77,10 @@ public class VillagerKnowledgeManager {
         return newData;
     }
 
-    /**
-     * Saves knowledge data to entity NBT.
-     *
-     * @param villager The villager entity
-     * @param data The data to save
-     */
+        /// Saves knowledge data to entity NBT.
+    ///
+    /// @param villager The villager entity
+    /// @param data The data to save
     public void saveData(Villager villager, VillagerKnowledgeData data) {
         try {
             CompoundTag persistentData = getPersistentData(villager);
@@ -102,10 +94,8 @@ public class VillagerKnowledgeManager {
         }
     }
 
-    /**
-     * Gets the persistent data container for an entity.
-     * This accesses the custom NBT data stored on the entity via our mixin.
-     */
+        /// Gets the persistent data container for an entity.
+    /// This accesses the custom NBT data stored on the entity via our mixin.
     private CompoundTag getPersistentData(Villager villager) {
         // Cast to the interface mixin to access custom data
         if (villager instanceof cx.gid.minecraft.tradeschool.VillagerEntityAccessor accessor) {
@@ -115,32 +105,24 @@ public class VillagerKnowledgeManager {
         return new CompoundTag();
     }
 
-    /**
-     * Called when a villager entity is loaded from disk.
-     * Preloads the data into cache.
-     */
+        /// Called when a villager entity is loaded from disk.
+    /// Preloads the data into cache.
     public void onVillagerLoaded(Villager villager) {
         getOrCreateData(villager);
     }
 
-    /**
-     * Removes data from cache when villager is removed/unloaded.
-     * The data persists in NBT, but we clear the cache.
-     */
+        /// Removes data from cache when villager is removed/unloaded.
+    /// The data persists in NBT, but we clear the cache.
     public void onVillagerUnloaded(UUID uuid) {
         knowledgeCache.remove(uuid);
     }
 
-    /**
-     * Clears the entire cache. Useful for server stop/reload.
-     */
+        /// Clears the entire cache. Useful for server stop/reload.
     public void clearCache() {
         knowledgeCache.clear();
     }
 
-    /**
-     * Gets the number of villagers currently cached.
-     */
+        /// Gets the number of villagers currently cached.
     public int getCacheSize() {
         return knowledgeCache.size();
     }

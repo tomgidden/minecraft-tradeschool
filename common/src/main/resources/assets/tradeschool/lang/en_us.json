@@ -31,6 +31,6 @@
   "tradeschool.taught.copyrighted": "Villagers can't learn from §ecopyrighted§r books and items.",
 
   "tradeschool.taught.title": "§aLesson learned",
-  "tradeschool.taught.subtitle": "%1$s can now make §e%2$s§r",
+  "tradeschool.taught.subtitle": "%s",
   "tradeschool.refund": "Your §e%s§r was handed back — the villager couldn't learn from it after all. Sorry!"
 }

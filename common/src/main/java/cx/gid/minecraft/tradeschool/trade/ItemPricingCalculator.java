@@ -9,30 +9,24 @@ import net.minecraft.world.item.enchantment.Enchantment;
 
 import java.util.Map;
 
-/**
- * Calculates emerald pricing for enchanted items based on material, type, and enchantments.
- */
+/// Calculates emerald pricing for enchanted items based on material, type, and enchantments.
 public class ItemPricingCalculator {
 
-    /**
-     * Calculate the price a villager should pay to be taught an item.
-     * Always returns 1-2 emeralds regardless of item value (as per Phase 8 requirements).
-     *
-     * @param professionLevel The villager's profession level
-     * @return The number of emeralds to pay (1-2)
-     */
+        /// Calculate the price a villager should pay to be taught an item.
+    /// Always returns 1-2 emeralds regardless of item value (as per Phase 8 requirements).
+    ///
+    /// @param professionLevel The villager's profession level
+    /// @return The number of emeralds to pay (1-2)
     public static int calculateTeachingPayment(int professionLevel) {
         // Simple formula: 1 emerald for levels 1-3, 2 emeralds for levels 4-5
         return professionLevel >= 4 ? 2 : 1;
     }
 
-    /**
-     * Calculate the price at which a villager should sell a learned item.
-     * Considers material cost, item type, and enchantment values.
-     *
-     * @param knowledge The item knowledge
-     * @return The number of emeralds to charge (1-64)
-     */
+        /// Calculate the price at which a villager should sell a learned item.
+    /// Considers material cost, item type, and enchantment values.
+    ///
+    /// @param knowledge The item knowledge
+    /// @return The number of emeralds to charge (1-64)
     public static int calculateSellingPrice(ItemKnowledge knowledge) {
         int basePrice = getBaseItemPrice(knowledge.getBaseItem().value());
         int enchantmentPrice = calculateEnchantmentPrice(knowledge.getEnchantments());
@@ -41,9 +35,7 @@ public class ItemPricingCalculator {
         return Math.min(64, basePrice + enchantmentPrice);
     }
 
-    /**
-     * Gets the base price for an unenchanted item based on material and type.
-     */
+        /// Gets the base price for an unenchanted item based on material and type.
     private static int getBaseItemPrice(Item item) {
         // Diamond
         if (item == Items.DIAMOND_CHESTPLATE) return 14;
@@ -113,17 +105,14 @@ public class ItemPricingCalculator {
         // Ranged (Fletcher)
         if (item == Items.BOW)         return 5;
         if (item == Items.CROSSBOW)    return 6;
-        if (item == Items.TIPPED_ARROW) return 8;
 
         return 3;
     }
 
-    /**
-     * Calculates the additional price contributed by enchantments.
-     * Higher level enchantments add more value.
-     * Tradable treasure enchantments (Mending, Frost Walker) have double price.
-     * Max-level-1 enchantments (Silk Touch, Mending, Flame) are treated as level 3 for pricing.
-     */
+        /// Calculates the additional price contributed by enchantments.
+    /// Higher level enchantments add more value.
+    /// Tradable treasure enchantments (Mending, Frost Walker) have double price.
+    /// Max-level-1 enchantments (Silk Touch, Mending, Flame) are treated as level 3 for pricing.
     private static int calculateEnchantmentPrice(Map<Holder<Enchantment>, Integer> enchantments) {
         int totalPrice = 0;
 
@@ -164,10 +153,8 @@ public class ItemPricingCalculator {
         return totalPrice;
     }
 
-    /**
-     * Gets the base value of an enchantment for pricing purposes.
-     * Rare/powerful enchantments are worth more.
-     */
+        /// Gets the base value of an enchantment for pricing purposes.
+    /// Rare/powerful enchantments are worth more.
     private static int getEnchantmentValue(Holder<Enchantment> enchantment) {
         String enchantId = enchantment.unwrapKey()
             .map(key -> key.toString())

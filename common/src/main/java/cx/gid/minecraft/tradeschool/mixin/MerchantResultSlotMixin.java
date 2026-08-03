@@ -17,11 +17,9 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-/**
- * Captures the payment item from trade slot 0 just before notifyTrade fires.
- * At this point the item is still present in the MerchantContainer, so we can
- * copy it and store it on the villager for use in AbstractVillagerTeachMixin.
- */
+/// Captures the payment item from trade slot 0 just before notifyTrade fires.
+/// At this point the item is still present in the MerchantContainer, so we can
+/// copy it and store it on the villager for use in AbstractVillagerTeachMixin.
 @Mixin(MerchantResultSlot.class)
 public abstract class MerchantResultSlotMixin {
 

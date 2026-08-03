@@ -25,9 +25,7 @@ public class TradeSchoolFabric implements ModInitializer {
         Constants.LOGGER.info("Trade School (Fabric) initialized");
     }
 
-    /**
-     * Registers Fabric event handlers for server lifecycle and entity events.
-     */
+        /// Registers Fabric event handlers for server lifecycle and entity events.
     private void registerEventHandlers() {
         // Server starting - initialize enchantment lists
         ServerLifecycleEvents.SERVER_STARTING.register(server -> {
@@ -58,9 +56,7 @@ public class TradeSchoolFabric implements ModInitializer {
         });
     }
 
-    /**
-     * Registers loot table modification events.
-     */
+        /// Registers loot table modification events.
     private void registerLootTableEvents() {
         LootTableEventHandler lootHandler = new LootTableEventHandler();
         lootHandler.register();

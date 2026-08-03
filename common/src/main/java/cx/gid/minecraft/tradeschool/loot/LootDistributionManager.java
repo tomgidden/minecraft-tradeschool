@@ -1,6 +1,7 @@
 package cx.gid.minecraft.tradeschool.loot;
 
 import cx.gid.minecraft.tradeschool.Constants;
+import cx.gid.minecraft.tradeschool.config.Config;
 import cx.gid.minecraft.tradeschool.loot.category.EnchantmentCategory;
 import cx.gid.minecraft.tradeschool.loot.config.*;
 import cx.gid.minecraft.tradeschool.loot.function.ApplyCurseOfCopyrightFunction;
@@ -26,11 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Manages loot table modifications for enchanted book distribution.
- * Singleton that coordinates the injection of structure/biome-specific
- * enchanted books into loot tables.
- */
+/// Manages loot table modifications for enchanted book distribution.
+/// Singleton that coordinates the injection of structure/biome-specific
+/// enchanted books into loot tables.
 public class LootDistributionManager {
     private static LootDistributionManager instance;
 
@@ -52,12 +51,10 @@ public class LootDistributionManager {
         return instance;
     }
 
-    /**
-     * Gets the loaded configuration.
-     * If not initialized, returns a default configuration.
-     *
-     * @return The loot configuration
-     */
+        /// Gets the loaded configuration.
+    /// If not initialized, returns a default configuration.
+    ///
+    /// @return The loot configuration
     public LootConfig getConfig() {
         if (lootConfig == null) {
             return LootConfig.createDefault();
@@ -65,17 +62,13 @@ public class LootDistributionManager {
         return lootConfig;
     }
 
-    /**
-     * Checks if the manager has been initialized.
-     */
+        /// Checks if the manager has been initialized.
     public boolean isInitialized() {
         return initialized;
     }
 
-    /**
-     * Early initialization during loot table loading (without server instance).
-     * Loads configuration so loot tables can be modified.
-     */
+        /// Early initialization during loot table loading (without server instance).
+    /// Loads configuration so loot tables can be modified.
     public void initializeEarly() {
         if (initialized) {
             return;
@@ -83,7 +76,10 @@ public class LootDistributionManager {
 
         Constants.LOGGER.info("Early initializing LootDistributionManager (during loot table load)");
 
-        // Load configuration from JSON
+        // Settings first: loot tables are built below, and the curse rate is a setting.
+        Config.load();
+
+        // Load loot table definitions from JSON
         this.lootConfig = LootConfigLoader.load();
 
         if (lootConfig == null) {
@@ -105,12 +101,10 @@ public class LootDistributionManager {
             lootConfig.structures.size(), enabledStructures);
     }
 
-    /**
-     * Initializes the loot distribution system by loading configuration.
-     * If already initialized early (during loot table load), this is a no-op.
-     *
-     * @param server The Minecraft server instance
-     */
+        /// Initializes the loot distribution system by loading configuration.
+    /// If already initialized early (during loot table load), this is a no-op.
+    ///
+    /// @param server The Minecraft server instance
     public void initialize(MinecraftServer server) {
         if (initialized) {
             Constants.LOGGER.info("LootDistributionManager already initialized, skipping");
@@ -121,10 +115,8 @@ public class LootDistributionManager {
         initializeEarly();
     }
 
-    /**
-     * Modifies a loot table by injecting enchanted books based on configuration.
-     * Called by the Fabric loot table event handler.
-     */
+        /// Modifies a loot table by injecting enchanted books based on configuration.
+    /// Called by the Fabric loot table event handler.
     public void modifyLootTable(
         String lootTableId,
         LootTable.Builder tableBuilder,
@@ -133,11 +125,9 @@ public class LootDistributionManager {
         injectEnchantedBooks(lootTableId, tableBuilder, registries);
     }
 
-    /**
-     * Injects an enchanted book pool via the provided consumer.
-     * Used by NeoForge where a LootTable.Builder is not available.
-     * The consumer receives a configured LootPool.Builder to add to the loot table.
-     */
+        /// Injects an enchanted book pool via the provided consumer.
+    /// Used by NeoForge where a LootTable.Builder is not available.
+    /// The consumer receives a configured LootPool.Builder to add to the loot table.
     public void modifyLootTableWithConsumer(
         String lootTableId,
         java.util.function.Consumer<LootPool.Builder> poolConsumer,
@@ -168,46 +158,40 @@ public class LootDistributionManager {
         }
     }
 
-    /**
-     * Whether this loot table should be touched at all.
-     *
-     * Both loaders must gate on exactly the same conditions or the same world seed yields
-     * different loot on Fabric and NeoForge. The checks therefore live here rather than in
-     * each loader's event handler, where they previously drifted apart.
-     *
-     * Only vanilla tables are touched, identified by namespace. NeoForge's
-     * LootTableLoadEvent carries no origin flag equivalent to Fabric's
-     * LootTableSource#isBuiltin, so the namespace is the one signal both loaders can read
-     * identically — and it is the signal that actually matters here, since the intent is
-     * to leave other mods' and datapacks' loot alone.
-     */
+        /// Whether this loot table should be touched at all.
+    ///
+    /// Both loaders must gate on exactly the same conditions or the same world seed yields
+    /// different loot on Fabric and NeoForge. The checks therefore live here rather than in
+    /// each loader's event handler, where they previously drifted apart.
+    ///
+    /// Only vanilla tables are touched, identified by namespace. NeoForge's
+    /// LootTableLoadEvent carries no origin flag equivalent to Fabric's
+    /// LootTableSource#isBuiltin, so the namespace is the one signal both loaders can read
+    /// identically — and it is the signal that actually matters here, since the intent is
+    /// to leave other mods' and datapacks' loot alone.
     public boolean shouldModifyLootTable(String lootTableId) {
         if (!initialized) return false;
-        if (!getConfig().global.enabled) return false;
+        if (!Config.get().enabled) return false;
         return lootTableId.startsWith("minecraft:");
     }
 
-    /**
-     * Whether the Curse of Copyright should be applied to items from this loot table.
-     *
-     * Deliberately flat across every found-loot source regardless of rarity or value, so
-     * the rule stays explainable: one in ten of what you find is copyrighted.
-     *
-     * Excluded by omission: block drops (a player breaking their own enchanted item's
-     * container is not finding treasure), mob drops and spawn equipment under
-     * {@code entities/} and {@code equipment/} — cursing those would let players farm the
-     * curse from a spawner — and shearing, harvest, and dispenser tables, which cannot
-     * yield enchanted items at all.
-     *
-     * Callers must have cleared {@link #shouldModifyLootTable} first.
-     */
+        /// Whether the Curse of Copyright should be applied to items from this loot table.
+    ///
+    /// Deliberately flat across every found-loot source regardless of rarity or value, so
+    /// the rule stays explainable: one in ten of what you find is copyrighted.
+    ///
+    /// Excluded by omission: block drops (a player breaking their own enchanted item's
+    /// container is not finding treasure), mob drops and spawn equipment under
+    /// `entities/` and `equipment/` — cursing those would let players farm the
+    /// curse from a spawner — and shearing, harvest, and dispenser tables, which cannot
+    /// yield enchanted items at all.
+    ///
+    /// Callers must have cleared [#shouldModifyLootTable] first.
     public boolean shouldCurseLootTable(String lootTableId) {
-        return getConfig().global.foundLootPrefixes.stream().anyMatch(lootTableId::startsWith);
+        return Config.get().loot.foundLootPrefixes.stream().anyMatch(lootTableId::startsWith);
     }
 
-    /**
-     * Gets the tier for a loot table (used to size injected enchantment levels).
-     */
+        /// Gets the tier for a loot table (used to size injected enchantment levels).
     public StructureTier getTierForLootTable(String lootTableId) {
         StructureConfig config = lootConfig.getStructure(lootTableId);
         if (config == null || !config.enabled) {
@@ -335,9 +319,7 @@ public class LootDistributionManager {
         return poolBuilder;
     }
 
-    /**
-     * Builds the list of enchantments that should appear in this structure.
-     */
+        /// Builds the list of enchantments that should appear in this structure.
     private List<EnchantmentEntry> buildEnchantmentList(StructureConfig config) {
         List<EnchantmentEntry> result = new ArrayList<>();
 
@@ -370,9 +352,7 @@ public class LootDistributionManager {
         return result;
     }
 
-    /**
-     * Adds enchantments from a category to the result list.
-     */
+        /// Adds enchantments from a category to the result list.
     private void addEnchantmentsFromCategory(
         String categoryName,
         List<EnchantmentEntry> result,
@@ -405,15 +385,13 @@ public class LootDistributionManager {
         }
     }
 
-    /**
-     * Calculates the weight for an enchantment at a given level.
-     * Higher levels are exponentially rarer.
-     *
-     * @param baseWeight The base weight from configuration
-     * @param currentLevel The current enchantment level
-     * @param maxLevel The maximum level for this enchantment
-     * @return The calculated weight
-     */
+        /// Calculates the weight for an enchantment at a given level.
+    /// Higher levels are exponentially rarer.
+    ///
+    /// @param baseWeight The base weight from configuration
+    /// @param currentLevel The current enchantment level
+    /// @param maxLevel The maximum level for this enchantment
+    /// @return The calculated weight
     private int calculateWeight(int baseWeight, int currentLevel, int maxLevel) {
         // Formula: baseWeight / (2^(currentLevel - 1))
         // Level 1: baseWeight
@@ -425,9 +403,7 @@ public class LootDistributionManager {
         return Math.max(1, weight); // Minimum weight of 1
     }
 
-    /**
-     * Internal class for tracking enchantment entries during list building.
-     */
+        /// Internal class for tracking enchantment entries during list building.
     private static class EnchantmentEntry {
         final String enchantmentId;
         final int weight;
@@ -440,10 +416,8 @@ public class LootDistributionManager {
         }
     }
 
-    /**
-     * Gets statistics about loot modifications.
-     * Useful for debugging and testing.
-     */
+        /// Gets statistics about loot modifications.
+    /// Useful for debugging and testing.
     public String getStatistics() {
         return String.format(
             "LootDistributionManager Statistics: %d loot tables modified, %d enchantment entries added, %d curses applied",
@@ -451,9 +425,7 @@ public class LootDistributionManager {
         );
     }
 
-    /**
-     * Resets statistics counters.
-     */
+        /// Resets statistics counters.
     public void resetStatistics() {
         totalModifications = 0;
         totalEnchantmentEntries = 0;

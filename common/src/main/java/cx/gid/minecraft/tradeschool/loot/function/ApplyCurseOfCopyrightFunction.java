@@ -4,7 +4,6 @@ import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 import cx.gid.minecraft.tradeschool.Constants;
 import cx.gid.minecraft.tradeschool.enchantment.ModEnchantments;
-import cx.gid.minecraft.tradeschool.loot.config.CurseConfig;
 import cx.gid.minecraft.tradeschool.loot.tier.StructureTier;
 import net.minecraft.core.Holder;
 import net.minecraft.core.component.DataComponents;
@@ -19,27 +18,32 @@ import net.minecraft.world.level.storage.loot.predicates.LootItemCondition;
 
 import java.util.List;
 
-/**
- * Loot item function that applies Curse of Copyright to enchanted books/items at a flat
- * probability. Applied dynamically at loot generation time.
- *
- * The {@code tier} field is vestigial: the curse rate used to vary by structure tier and
- * is now flat (see {@link CurseConfig}). It is retained because it is a serialized codec
- * field, so dropping it would invalidate existing datapack-encoded functions. Prefer
- * {@link #applyCurse()} for new call sites.
- */
+/// Loot item function that applies Curse of Copyright to enchanted books and gear. Applied
+/// dynamically at loot generation time.
+///
+/// The rate comes from `curse_of_copyright.loot_probability`, which is stated per
+/// structure tier. The shipped configuration gives every tier the same value — one in ten of
+/// what you find is copyrighted, wherever you found it, which is a rule players can hold in
+/// their heads — but an operator can vary it, so the `tier` field is read rather than
+/// ignored.
 public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
+    // "tier" is optional: tables cursed by prefix rather than looked up as structures have
+    // no tier to record. A required field would fail to encode for exactly those, which is
+    // most of what gets cursed. Datapacks written when it was mandatory still decode.
     public static final MapCodec<ApplyCurseOfCopyrightFunction> CODEC = RecordCodecBuilder.mapCodec(
         instance -> commonFields(instance)
-            .and(StructureTier.CODEC.fieldOf("tier").forGetter(f -> f.tier))
+            .and(StructureTier.CODEC.optionalFieldOf("tier")
+                .forGetter(f -> java.util.Optional.ofNullable(f.tier)))
             .apply(instance, ApplyCurseOfCopyrightFunction::new)
     );
 
+    @org.jetbrains.annotations.Nullable
     private final StructureTier tier;
 
-    protected ApplyCurseOfCopyrightFunction(List<LootItemCondition> conditions, StructureTier tier) {
+    protected ApplyCurseOfCopyrightFunction(List<LootItemCondition> conditions,
+                                            java.util.Optional<StructureTier> tier) {
         super(conditions);
-        this.tier = tier;
+        this.tier = tier.orElse(null);
     }
 
     @Override
@@ -66,7 +70,7 @@ public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
                 stack.getItem(), tier, isBook, isEnchantedItem);
 
             // Check probability based on tier
-            double probability = CurseConfig.getCurseProbability(tier);
+            double probability = cx.gid.minecraft.tradeschool.config.Config.get().curseOfCopyright.lootProbabilityFor(tier);
             double roll = context.getRandom().nextDouble();
 
             if (roll >= probability) {
@@ -104,21 +108,23 @@ public class ApplyCurseOfCopyrightFunction extends LootItemConditionalFunction {
         return stack;
     }
 
-    /**
-     * Creates a new function instance. The curse rate is flat, so no tier is needed.
-     */
+        /// Creates a function for a loot table of no particular tier.
+    ///
+    /// Used for the vanilla tables both loaders curse wholesale, which are matched by
+    /// prefix rather than looked up as structures and so have no tier to offer. They take
+    /// the first configured rate — with the shipped flat configuration that is simply the
+    /// rate, and an operator who varies it by tier has said nothing about tables that are
+    /// not structures.
     public static LootItemConditionalFunction.Builder<?> applyCurse() {
-        return applyCurse(StructureTier.MEDIUM);
+        return applyCurse(null);
     }
 
-    /**
-     * Creates a new function instance carrying the given tier.
-     *
-     * @deprecated The tier no longer affects the curse rate; use {@link #applyCurse()}.
-     *     Retained for the codec, which still round-trips the field.
-     */
-    @Deprecated
-    public static LootItemConditionalFunction.Builder<?> applyCurse(StructureTier tier) {
-        return simpleBuilder(conditions -> new ApplyCurseOfCopyrightFunction(conditions, tier));
+        /// Creates a function for a loot table of known tier.
+    ///
+    /// @param tier the structure's tier, or null if it has none
+    public static LootItemConditionalFunction.Builder<?> applyCurse(
+            @org.jetbrains.annotations.Nullable StructureTier tier) {
+        return simpleBuilder(conditions ->
+            new ApplyCurseOfCopyrightFunction(conditions, java.util.Optional.ofNullable(tier)));
     }
 }

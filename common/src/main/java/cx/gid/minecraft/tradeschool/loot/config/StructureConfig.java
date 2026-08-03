@@ -5,10 +5,8 @@ import cx.gid.minecraft.tradeschool.loot.tier.StructureTier;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Configuration for a specific structure's loot table modifications.
- * Defines which enchantments appear, their weights, and tier settings.
- */
+/// Configuration for a specific structure's loot table modifications.
+/// Defines which enchantments appear, their weights, and tier settings.
 public class StructureConfig {
     public boolean enabled = true;
     public String tier; // "LOW", "MEDIUM", "HIGH", "TOP"
@@ -23,11 +21,9 @@ public class StructureConfig {
         // Required for Gson deserialization
     }
 
-    /**
-     * Gets the structure tier enum value.
-     *
-     * @return The tier, or null if tier string is invalid
-     */
+        /// Gets the structure tier enum value.
+    ///
+    /// @return The tier, or null if tier string is invalid
     public StructureTier getTier() {
         if (tier == null) {
             return null;
@@ -39,12 +35,10 @@ public class StructureConfig {
         }
     }
 
-    /**
-     * Gets the maximum enchantment level for this structure.
-     * Uses override if set, otherwise uses tier's default.
-     *
-     * @return The maximum enchantment level
-     */
+        /// Gets the maximum enchantment level for this structure.
+    /// Uses override if set, otherwise uses tier's default.
+    ///
+    /// @return The maximum enchantment level
     public int getMaxEnchantmentLevel() {
         if (maxLevelOverride != null) {
             return maxLevelOverride;

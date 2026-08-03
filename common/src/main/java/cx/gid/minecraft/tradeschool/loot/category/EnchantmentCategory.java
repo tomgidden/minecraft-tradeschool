@@ -2,11 +2,9 @@ package cx.gid.minecraft.tradeschool.loot.category;
 
 import java.util.List;
 
-/**
- * Categories of enchantments based on their thematic grouping.
- * Used to distribute enchantments across different biomes and structure types.
- * Based on Minecraft's Villager Trade Rebalance enchantment groupings.
- */
+/// Categories of enchantments based on their thematic grouping.
+/// Used to distribute enchantments across different biomes and structure types.
+/// Based on Minecraft's Villager Trade Rebalance enchantment groupings.
 public enum EnchantmentCategory {
     WATER(List.of(
         "minecraft:aqua_affinity",
@@ -71,21 +69,17 @@ public enum EnchantmentCategory {
         this.enchantmentIds = enchantmentIds;
     }
 
-    /**
-     * Checks if this category contains the given enchantment ID.
-     *
-     * @param enchantmentId The enchantment ID to check (e.g., "minecraft:sharpness")
-     * @return true if this category contains the enchantment
-     */
+        /// Checks if this category contains the given enchantment ID.
+    ///
+    /// @param enchantmentId The enchantment ID to check (e.g., "minecraft:sharpness")
+    /// @return true if this category contains the enchantment
     public boolean contains(String enchantmentId) {
         return enchantmentIds.contains(enchantmentId);
     }
 
-    /**
-     * Gets all enchantment IDs in this category.
-     *
-     * @return Unmodifiable list of enchantment IDs
-     */
+        /// Gets all enchantment IDs in this category.
+    ///
+    /// @return Unmodifiable list of enchantment IDs
     public List<String> getEnchantmentIds() {
         return enchantmentIds;
     }

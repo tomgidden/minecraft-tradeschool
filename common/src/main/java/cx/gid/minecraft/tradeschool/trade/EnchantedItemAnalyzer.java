@@ -18,9 +18,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Analyzes enchanted items to extract enchantment data and validate materials.
- */
+/// Analyzes enchanted items to extract enchantment data and validate materials.
 public class EnchantedItemAnalyzer {
 
     // Material tier indices 0–4, mapping to villager levels 1–5.
@@ -92,32 +90,27 @@ public class EnchantedItemAnalyzer {
         DataComponents.REPAIR_COST
     );
 
-    /**
-     * The outcome of analysing an item.
-     *
-     * {@code learnMessage} is a whole sentence; {@code learnedDescription} is just the
-     * item and its enchantments. Callers that want to phrase their own sentence should use
-     * the latter — picking the description back out of the sentence with a regex, as they
-     * used to, broke as soon as the wording changed.
-     */
-    public record AnalysisResult(ItemKnowledge knowledge, String learnMessage,
-                                 String learnedDescription) {}
+        /// The outcome of analysing an item.
+    ///
+    /// `learnedDescription` names the item and its enchantments — "Enchanted Book with
+    /// Sharpness I, Unbreaking I" — and nothing more. Sentences are the caller's business:
+    /// this class once built one here too, which meant the same lesson was worded one way in
+    /// chat and another in the title, and callers wanting just the item resorted to picking
+    /// it back out with a regex that broke whenever the sentence changed. Phrasing now lives
+    /// in [Describe] and the message files.
+    public record AnalysisResult(ItemKnowledge knowledge, String learnedDescription) {}
 
-    /**
-     * Returns true if this item is gold for weapons/tools (valid at any villager level, kept as gold).
-     */
+        /// Returns true if this item is gold for weapons/tools (valid at any villager level, kept as gold).
     public static boolean isGoldWeaponOrTool(Item item) {
         return GOLD_WEAPONS_TOOLS.contains(item);
     }
 
-    /**
-     * Returns true if this item is gold armor (valid at armorer level 2+, kept as gold).
-     */
+        /// Returns true if this item is gold armor (valid at armorer level 2+, kept as gold).
     public static boolean isGoldArmor(Item item) {
         return GOLD_ARMOR.contains(item);
     }
 
-    /** Returns the tier index (0–4) for an armor/weapon/tool item, or -1 if not in tiers. */
+        ///  Returns the tier index (0–4) for an armor/weapon/tool item, or -1 if not in tiers.
     private static int getArmorTierIndex(Item item) {
         Item resolved = CHAINMAIL_TO_COPPER.getOrDefault(item, item);
         for (Item[] row : ARMOR_TIERS) {
@@ -146,7 +139,7 @@ public class EnchantedItemAnalyzer {
         return -1;
     }
 
-    /** Returns the tier index of the item (weapons/tools/armor), or -1. */
+        ///  Returns the tier index of the item (weapons/tools/armor), or -1.
     public static int getTierIndex(Item item) {
         int w = getWeaponTierIndex(item); if (w >= 0) return w;
         int t = getToolTierIndex(item);   if (t >= 0) return t;
@@ -158,12 +151,10 @@ public class EnchantedItemAnalyzer {
         return -1;
     }
 
-    /**
-     * Downgrades an item's material to the highest tier the villager can handle.
-     * Gold weapons/tools are always kept as-is.
-     * Gold armor is kept if villagerLevel >= 2, else downgraded to leather.
-     * Returns the same item if it's already at or below the villager's max tier.
-     */
+        /// Downgrades an item's material to the highest tier the villager can handle.
+    /// Gold weapons/tools are always kept as-is.
+    /// Gold armor is kept if villagerLevel >= 2, else downgraded to leather.
+    /// Returns the same item if it's already at or below the villager's max tier.
     public static Item downgradeItemToLevel(Item item, int villagerLevel) {
         // Gold weapons/tools: keep at any level
         if (isGoldWeaponOrTool(item)) return item;
@@ -236,7 +227,7 @@ public class EnchantedItemAnalyzer {
         return best;
     }
 
-    /** Returns true if the item is netherite gear that this profession would otherwise handle. */
+        ///  Returns true if the item is netherite gear that this profession would otherwise handle.
     public static boolean isNetheriteForProfession(Item item, String profession) {
         if (profession.contains("weaponsmith"))
             return item == Items.NETHERITE_SWORD || item == Items.NETHERITE_AXE;
@@ -249,7 +240,7 @@ public class EnchantedItemAnalyzer {
         return false;
     }
 
-    /** Returns true if the item is one this profession handles (any tier, excluding netherite). */
+        ///  Returns true if the item is one this profession handles (any tier, excluding netherite).
     public static boolean isItemForProfession(Item item, String profession) {
         if (profession.contains("librarian"))   return item == Items.ENCHANTED_BOOK;
         if (profession.contains("weaponsmith")) return isWeapon(item);
@@ -259,19 +250,15 @@ public class EnchantedItemAnalyzer {
         return false;
     }
 
-    /**
-     * Returns true if the item is teachable at any level for the given profession.
-     * Excludes netherite and items not relevant to the profession.
-     */
+        /// Returns true if the item is teachable at any level for the given profession.
+    /// Excludes netherite and items not relevant to the profession.
     public static boolean isTeachableForProfession(Item item, String profession) {
         if (isNetheriteForProfession(item, profession)) return false;
         return isItemForProfession(item, profession);
     }
 
-    /**
-     * Returns the minimum villager level required to teach this item without downgrade.
-     * For shields: level 3 (armorer journeyman).
-     */
+        /// Returns the minimum villager level required to teach this item without downgrade.
+    /// For shields: level 3 (armorer journeyman).
     public static int getMinVillagerLevelForItem(Item item) {
         if (item == Items.SHIELD) return 3;
         if (isGoldWeaponOrTool(item)) return 1;
@@ -281,15 +268,14 @@ public class EnchantedItemAnalyzer {
         return TIER_MIN_VILLAGER_LEVEL[tier];
     }
 
-    /**
-     * Analyzes an item stack, computing what the villager would learn.
-     * - Downgrades material to villager level
-     * - Caps enchantment levels to villager level
-     * - Strips customisation components (trim, dye, name, lore) from knowledge
-     * - Preserves gameplay components (damage, repair_cost) in knowledge
-     * - Returns both the ItemKnowledge and a human-readable learn message
-     */
-    public static AnalysisResult analyzeItem(ItemStack stack, int villagerLevel, String professionLabel) {
+        /// Analyzes an item stack, computing what the villager would learn.
+    /// - Downgrades material to villager level
+    /// - Caps enchantment levels to villager level
+    /// - Strips customisation components (trim, dye, name, lore) from knowledge
+    /// - Preserves gameplay components (damage, repair_cost) in knowledge
+    /// - Returns both the ItemKnowledge and a human-readable learn message
+    public static AnalysisResult analyzeItem(ItemStack stack, int villagerLevel, String professionLabel,
+                                             net.minecraft.core.HolderLookup.Provider registries) {
         Item originalItem = stack.getItem();
         Item learnedItem  = downgradeItemToLevel(originalItem, villagerLevel);
         boolean itemDowngraded = learnedItem != originalItem;
@@ -301,37 +287,35 @@ public class EnchantedItemAnalyzer {
             enchantments = stack.getOrDefault(DataComponents.STORED_ENCHANTMENTS, ItemEnchantments.EMPTY);
         }
 
-        // LinkedHashMap, not HashMap: this is where an item's enchantment order is
-        // established, and everything downstream — the trade, the chat line, the title —
-        // reports whatever order it finds. An unordered map made the same book read
-        // differently in each of them.
+        // Filled in whatever order the stack yields — which is hash order, since
+        // ItemEnchantments is backed by an Object2IntOpenHashMap — and sorted into tooltip
+        // order once complete. Sorting here rather than at each message means the trade
+        // item, the chat line and the title all carry the same sequence, and it is the
+        // sequence the player already sees in tooltips.
         Map<Holder<Enchantment>, Integer> learnedEnchantments = new LinkedHashMap<>();
-        List<String> learnedDesc  = new ArrayList<>();
-        List<String> skippedDesc  = new ArrayList<>();
 
         for (Holder<Enchantment> ench : enchantments.keySet()) {
             int originalLevel = enchantments.getLevel(ench);
             int maxLevel      = EnchantmentProperties.getMaxLevel(ench);
             boolean isSingleLevel = maxLevel == 1;
             int minVillagerLevel  = isSingleLevel
-                ? LootDistributionManager.getInstance().getConfig()
-                    .global.trade.singleLevelEnchantmentMinVillagerLevel
+                ? cx.gid.minecraft.tradeschool.config.Config.get()
+                    .teaching.singleLevelEnchantmentMinimumLevel
                 : 1;
 
             if (!EnchantmentProperties.isTradable(ench)) {
-                skippedDesc.add(enchantmentName(ench, originalLevel));
                 continue;
             }
 
             if (villagerLevel < minVillagerLevel) {
-                skippedDesc.add(enchantmentName(ench, originalLevel));
                 continue;
             }
 
             int learnedLevel = isSingleLevel ? 1 : Math.min(originalLevel, villagerLevel);
             learnedEnchantments.put(ench, learnedLevel);
-            learnedDesc.add(enchantmentName(ench, learnedLevel));
         }
+
+        learnedEnchantments = EnchantmentProperties.inTooltipOrder(learnedEnchantments, registries);
 
         // Preserved gameplay components (damage, repair_cost) — included in learned trade
         DataComponentPatch.Builder preserved = DataComponentPatch.builder();
@@ -341,31 +325,12 @@ public class EnchantedItemAnalyzer {
         // Note: trim, dye, name, lore are stripped — villager sells clean items.
         // FUTURE: re-evaluate once trim/dye exploit analysis is complete.
 
-        // Build learn message
-        String learnedItemName  = itemDisplayName(learnedItem);
-        String originalItemName = itemDisplayName(originalItem);
-
-        StringBuilder msg = new StringBuilder("The ").append(professionLabel).append(" has learned how to make a ");
-        msg.append(learnedItemName);
-        if (!learnedDesc.isEmpty()) {
-            msg.append(" with ").append(joinAnd(learnedDesc));
-        }
-
-        List<String> limitations = new ArrayList<>();
-        if (itemDowngraded) {
-            limitations.add("they aren't experienced enough to make a " + originalItemName + " yet");
-        }
-        if (!skippedDesc.isEmpty()) {
-            limitations.add("they aren't experienced enough to learn " + joinAnd(skippedDesc));
-        }
-        if (!limitations.isEmpty()) {
-            msg.append("; ").append(String.join(", and ", limitations));
-        }
-
         Holder<Item> itemHolder = net.minecraft.core.registries.BuiltInRegistries.ITEM.wrapAsHolder(learnedItem);
         ItemKnowledge knowledge = new ItemKnowledge(itemHolder, learnedEnchantments, villagerLevel, preserved.build());
-        return new AnalysisResult(knowledge, msg.toString(),
-            Describe.item(knowledge.createItemStack()));
+        // Described from the ordered map rather than from the stack: the stack's
+        // ItemEnchantments is hash-ordered, so building the text from it would state the
+        // enchantments in a different order here than everywhere else.
+        return new AnalysisResult(knowledge, Describe.item(learnedItem, learnedEnchantments));
     }
 
     @SuppressWarnings("unchecked")
@@ -375,12 +340,10 @@ public class EnchantedItemAnalyzer {
         if (value != null) builder.set(type, value);
     }
 
-    /**
-     * Determines whether the teach result is a "full learn" — no material downgrade and no
-     * enchantment level was capped. Customisation stripping (trim, dye, name) does NOT count
-     * as a downgrade: the villager always sells a clean item, and the player gets emeralds.
-     * Full learn → player gets emeralds. Partial learn → player gets the result item.
-     */
+        /// Determines whether the teach result is a "full learn" — no material downgrade and no
+    /// enchantment level was capped. Customisation stripping (trim, dye, name) does NOT count
+    /// as a downgrade: the villager always sells a clean item, and the player gets emeralds.
+    /// Full learn → player gets emeralds. Partial learn → player gets the result item.
     public static boolean isFullLearn(ItemStack offered, ItemKnowledge result) {
         Item learnedItem = result.getBaseItem().value();
         if (learnedItem != offered.getItem()) return false; // material downgraded
@@ -400,11 +363,6 @@ public class EnchantedItemAnalyzer {
         return true;
     }
 
-    /** Back-compat overload. */
-    public static ItemKnowledge analyzeItem(ItemStack stack, int villagerLevel) {
-        return analyzeItem(stack, villagerLevel, "villager").knowledge();
-    }
-
     // ── item type predicates ──────────────────────────────────────────────────
 
     private static boolean isWeapon(Item item) {
@@ -413,11 +371,9 @@ public class EnchantedItemAnalyzer {
         return false;
     }
 
-    /**
-     * Axes are both a weapon and a tool, as in vanilla: toolsmiths and weaponsmiths each
-     * deal in them. They live in WEAPON_TIERS for tier/downgrade purposes, so the tool
-     * predicate has to name them explicitly.
-     */
+        /// Axes are both a weapon and a tool, as in vanilla: toolsmiths and weaponsmiths each
+    /// deal in them. They live in WEAPON_TIERS for tier/downgrade purposes, so the tool
+    /// predicate has to name them explicitly.
     private static boolean isAxe(Item item) {
         return item == Items.WOODEN_AXE || item == Items.STONE_AXE || item == Items.COPPER_AXE
             || item == Items.IRON_AXE   || item == Items.DIAMOND_AXE || item == Items.GOLDEN_AXE;
@@ -446,12 +402,6 @@ public class EnchantedItemAnalyzer {
 
     // ── string helpers ────────────────────────────────────────────────────────
 
-    private static String enchantmentName(Holder<Enchantment> ench, int level) {
-        String id = ench.unwrapKey().map(k -> k.identifier().getPath()).orElse("unknown");
-        String name = capitalise(id.replace('_', ' '));
-        if (EnchantmentProperties.getMaxLevel(ench) == 1) return name;
-        return name + " " + toRoman(level);
-    }
 
     public static String itemDisplayName(Item item) {
         String id = net.minecraft.core.registries.BuiltInRegistries.ITEM
@@ -472,21 +422,5 @@ public class EnchantedItemAnalyzer {
         return sb.toString();
     }
 
-    private static String toRoman(int n) {
-        return switch (n) {
-            case 1 -> "I"; case 2 -> "II"; case 3 -> "III";
-            case 4 -> "IV"; case 5 -> "V";  default -> String.valueOf(n);
-        };
-    }
 
-    private static String joinAnd(List<String> items) {
-        if (items.isEmpty()) return "";
-        if (items.size() == 1) return "'" + items.get(0) + "'";
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < items.size(); i++) {
-            if (i > 0) sb.append(i == items.size() - 1 ? " and " : ", ");
-            sb.append("'").append(items.get(i)).append("'");
-        }
-        return sb.toString();
-    }
 }

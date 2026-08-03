@@ -2,10 +2,8 @@ package cx.gid.minecraft.tradeschool.loot.config;
 
 import java.util.List;
 
-/**
- * Configuration for an enchantment category, defining which enchantments
- * belong to the category and their default weight.
- */
+/// Configuration for an enchantment category, defining which enchantments
+/// belong to the category and their default weight.
 public class CategoryConfig {
     public List<String> enchantments;
     public int defaultWeight;

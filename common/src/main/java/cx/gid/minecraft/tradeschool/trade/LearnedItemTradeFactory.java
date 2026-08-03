@@ -12,13 +12,11 @@ import net.minecraft.world.item.trading.ItemCost;
 import net.minecraft.world.item.trading.MerchantOffer;
 import org.jetbrains.annotations.Nullable;
 
-/**
- * Creates trades that sell learned items.
- * The villager offers enchanted items they've been taught,
- * with prices based on material, type, and enchantments.
- *
- * For Weaponsmiths, Toolsmiths, Armourers, and Fletchers.
- */
+/// Creates trades that sell learned items.
+/// The villager offers enchanted items they've been taught,
+/// with prices based on material, type, and enchantments.
+///
+/// For Weaponsmiths, Toolsmiths, Armourers, and Fletchers.
 public class LearnedItemTradeFactory {
 
     private final ItemKnowledge itemKnowledge;
@@ -44,17 +42,21 @@ public class LearnedItemTradeFactory {
         // Calculate price based on material and enchantments
         int price = ItemPricingCalculator.calculateSellingPrice(itemKnowledge);
 
-        // Ensure price is within valid range (1-64 emeralds)
-        price = Math.max(1, Math.min(64, price));
+        var config = cx.gid.minecraft.tradeschool.config.Config.get().trading;
+        price = Math.max(config.minimumItemPrice(), Math.min(config.maximumPrice, price));
 
         // Create the trade offer
         // Format: Player pays emeralds → Gets enchanted item
+        // Same settings as a learned book: this is the gear equivalent, and a smith whose
+        // lessons advanced them at a different rate from a librarian's would be arbitrary.
+        // Experience is fixed by the level the lesson was given at, not the villager's
+        // current one — see LearnedTradeFactory for why that distinction matters.
         return new MerchantOffer(
                 new ItemCost(Items.EMERALD, price),
                 offeredItem.copy(),
-                12, // Max uses - can sell this item multiple times
-                5, // Villager XP gain
-                0.2F // Price multiplier (slight discount for repeated trades)
+                config.maxUses,
+                config.xpForLevel(itemKnowledge.getLearnedAtLevel()),
+                config.learnedTradePriceMultiplier
         );
     }
 }

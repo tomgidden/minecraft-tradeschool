@@ -19,11 +19,9 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Represents a learned item template for Weaponsmiths, Toolsmiths, and Armourers.
- * Stores the base item type, all enchantments with their levels (capped at time of learning),
- * and preserves item attributes like damage, repair cost, trim, custom name, etc.
- */
+/// Represents a learned item template for Weaponsmiths, Toolsmiths, and Armourers.
+/// Stores the base item type, all enchantments with their levels (capped at time of learning),
+/// and preserves item attributes like damage, repair cost, trim, custom name, etc.
 public class ItemKnowledge {
     private final Holder<Item> baseItem;
     private final Map<Holder<Enchantment>, Integer> enchantments; // Enchantment -> level
@@ -53,12 +51,10 @@ public class ItemKnowledge {
         return learnedAtLevel;
     }
 
-    /**
-     * Creates an ItemStack from this knowledge.
-     * Applies all learned enchantments and preserved attributes to the item.
-     *
-     * @return An ItemStack with the base item, all enchantments, and preserved attributes
-     */
+        /// Creates an ItemStack from this knowledge.
+    /// Applies all learned enchantments and preserved attributes to the item.
+    ///
+    /// @return An ItemStack with the base item, all enchantments, and preserved attributes
     public ItemStack createItemStack() {
         ItemStack stack = new ItemStack(baseItem);
 
@@ -85,9 +81,7 @@ public class ItemKnowledge {
         return stack;
     }
 
-    /**
-     * Serializes this knowledge to NBT.
-     */
+        /// Serializes this knowledge to NBT.
     public CompoundTag toNbt(HolderLookup.Provider registryAccess) {
         CompoundTag nbt = new CompoundTag();
 
@@ -135,9 +129,7 @@ public class ItemKnowledge {
         return nbt;
     }
 
-    /**
-     * Deserializes knowledge from NBT.
-     */
+        /// Deserializes knowledge from NBT.
     public static ItemKnowledge fromNbt(CompoundTag nbt, HolderLookup.Provider registryAccess) {
         String itemId = nbt.getString("BaseItem").orElse("minecraft:iron_sword");
         int learnedAtLevel = nbt.getInt("LearnedAtLevel").orElse(1);

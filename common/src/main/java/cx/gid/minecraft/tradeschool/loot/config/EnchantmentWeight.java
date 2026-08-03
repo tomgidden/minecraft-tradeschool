@@ -1,9 +1,7 @@
 package cx.gid.minecraft.tradeschool.loot.config;
 
-/**
- * Represents the weight and level configuration for a specific enchantment
- * in a structure's loot table.
- */
+/// Represents the weight and level configuration for a specific enchantment
+/// in a structure's loot table.
 public class EnchantmentWeight {
     public int weight;
     public Integer maxLevel; // null means use enchantment's natural max level

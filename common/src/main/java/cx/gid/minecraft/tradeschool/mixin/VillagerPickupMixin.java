@@ -46,20 +46,18 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Mixin to enable villagers to learn from items traded via the UI.
- *
- * When a player right-clicks a tradeschool villager, teachable items in the mainhand,
- * hotbar and main inventory (up to max_teach_offers, excluding netherite) get ephemeral
- * teach offers inserted. Worn armour and the offhand are excluded: MerchantMenu can only
- * draw payment from menu slots 3..38, so an offer built from either could never be paid.
- *
- * Dedup is by enchantments only (not damage). Two swords with the same enchants
- * but different damage collapse to one offer. We record all inventory slots that
- * hold a qualifying item for each offer group. At notifyTrade time we inspect
- * the player's inventory to find which slot was consumed, then use that slot's
- * stored copy (which has the correct damage/repair_cost) as the taught item.
- */
+/// Mixin to enable villagers to learn from items traded via the UI.
+///
+/// When a player right-clicks a tradeschool villager, teachable items in the mainhand,
+/// hotbar and main inventory (up to max_teach_offers, excluding netherite) get ephemeral
+/// teach offers inserted. Worn armour and the offhand are excluded: MerchantMenu can only
+/// draw payment from menu slots 3..38, so an offer built from either could never be paid.
+///
+/// Dedup is by enchantments only (not damage). Two swords with the same enchants
+/// but different damage collapse to one offer. We record all inventory slots that
+/// hold a qualifying item for each offer group. At notifyTrade time we inspect
+/// the player's inventory to find which slot was consumed, then use that slot's
+/// stored copy (which has the correct damage/repair_cost) as the taught item.
 @Mixin(Villager.class)
 public abstract class VillagerPickupMixin implements IVillagerTeachState {
 
@@ -80,32 +78,26 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
     @Override public ItemStack tradeschool$getLastSubmittedItem() { return tradeschool$lastSubmittedItem; }
     @Override public void tradeschool$setLastSubmittedItem(ItemStack s) { tradeschool$lastSubmittedItem = s; }
 
-    /** Set by refusalReason when a message needs a detail; read straight after. */
+        ///  Set by refusalReason when a message needs a detail; read straight after.
     @Unique private String tradeschool$lastRefusalDetail = "";
 
-    /**
-     * What each nearby player was last told about, and when.
-     *
-     * Keyed by player, holding the hash of the item described and the game time it was
-     * mentioned. Entries expire rather than being cleared the moment a player stops being
-     * relevant: a villager pathing in and out of range would otherwise erase its own
-     * memory and greet the player again every few seconds, which is what a wandering
-     * librarian does constantly.
-     */
+        /// What each nearby player was last told about, and when.
+    ///
+    /// Keyed by player, holding the hash of the item described and the game time it was
+    /// mentioned. Entries expire rather than being cleared the moment a player stops being
+    /// relevant: a villager pathing in and out of range would otherwise erase its own
+    /// memory and greet the player again every few seconds, which is what a wandering
+    /// librarian does constantly.
     @Unique private final Map<UUID, long[]> tradeschool$notifiedHeldItems = new HashMap<>();
 
-    /**
-     * How long before the same player can be told the same thing again, in ticks.
-     * Twenty minutes: long enough not to nag, short enough that a player who has genuinely
-     * forgotten gets a reminder.
-     */
+        /// How long before the same player can be told the same thing again, in ticks.
+    /// Twenty minutes: long enough not to nag, short enough that a player who has genuinely
+    /// forgotten gets a reminder.
     @Unique private static final long TRADESCHOOL$REMIND_AFTER_TICKS = 24000L;
     @Unique private int tradeschool$lastKnownLevel = 0;
 
-    /**
-     * True if this player has already been told about this exact thing recently.
-     * Records the mention when it has not.
-     */
+        /// True if this player has already been told about this exact thing recently.
+    /// Records the mention when it has not.
     @Unique
     private boolean tradeschool$alreadyTold(ServerPlayer player, int what, long now) {
         long[] last = tradeschool$notifiedHeldItems.get(player.getUUID());
@@ -117,15 +109,23 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
     }
 
     @Unique
-    private static cx.gid.minecraft.tradeschool.loot.config.TradeConfig tradeschool$config() {
-        return cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
-            .getConfig().global.trade;
+    private static cx.gid.minecraft.tradeschool.config.TradingSection tradeschool$trading() {
+        return cx.gid.minecraft.tradeschool.config.Config.get().trading;
     }
 
     @Unique
-    private static cx.gid.minecraft.tradeschool.loot.config.FeedbackConfig tradeschool$feedback() {
-        return cx.gid.minecraft.tradeschool.loot.LootDistributionManager.getInstance()
-            .getConfig().global.feedback;
+    private static cx.gid.minecraft.tradeschool.config.TeachingSection tradeschool$teaching() {
+        return cx.gid.minecraft.tradeschool.config.Config.get().teaching;
+    }
+
+    @Unique
+    private static cx.gid.minecraft.tradeschool.config.InteractionSection tradeschool$interaction() {
+        return cx.gid.minecraft.tradeschool.config.Config.get().interaction;
+    }
+
+    @Unique
+    private static cx.gid.minecraft.tradeschool.config.FeedbackSection tradeschool$feedback() {
+        return cx.gid.minecraft.tradeschool.config.Config.get().feedback;
     }
 
     // ── mobInteract — insert teach offers before UI opens ────────────────────
@@ -218,27 +218,19 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
 
     private static class ScanResult {
         final List<OfferGroup> groups = new ArrayList<>();
-        /** Message keys for reasons the held item was turned down. */
+                ///  Message keys for reasons the held item was turned down.
         final List<String> refusals = new ArrayList<>();
-        /** Extra detail for the refusal message — an enchantment name, usually. */
+                ///  Extra detail for the refusal message — an enchantment name, usually.
         String refusalDetail = "";
-        /**
-         * Items this villager won't learn, shown as greyed-out offers so the player can see
-         * they were considered. Kept apart from {@link #groups} because they only fill the
-         * offer limit once every viable trade has a place.
-         */
-        final List<OfferGroup> rejected = new ArrayList<>();
     }
 
-    /**
-     * Scans the slots a trade can actually be paid from for something teachable.
-     *
-     * Groups by enchantment-only signature (dedup identical-enchant swords with different damage).
-     * Records all slot indices per group so notifyTrade can identify which slot was consumed.
-     *
-     * Slot numbers follow Inventory internal layout: 0-8 hotbar, 9-35 main inventory.
-     * 36-39 (armour) and 40 (offhand) are deliberately not scanned.
-     */
+        /// Scans the slots a trade can actually be paid from for something teachable.
+    ///
+    /// Groups by enchantment-only signature (dedup identical-enchant swords with different damage).
+    /// Records all slot indices per group so notifyTrade can identify which slot was consumed.
+    ///
+    /// Slot numbers follow Inventory internal layout: 0-8 hotbar, 9-35 main inventory.
+    /// 36-39 (armour) and 40 (offhand) are deliberately not scanned.
     @Unique
     private ScanResult tradeschool$scanAndGroup(ServerPlayer sp, String professionId, Villager villager) {
         int villagerLevel = villager.getVillagerData().level();
@@ -267,7 +259,7 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         for (int i = 0; i <= 8; i++) if (i != selectedHotbar) slotOrder.add(i);
         for (int i = 9; i <= 35; i++) slotOrder.add(i);
 
-        int maxOffers = tradeschool$config().maxTeachOffers;
+        int maxOffers = tradeschool$trading().maxTeachOffers;
 
         for (int slotIdx : slotOrder) {
             ItemStack stack = inv.getItem(slotIdx);
@@ -282,16 +274,6 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
                 if (slotIdx == selectedHotbar && !SILENT_REFUSAL.equals(refusal)) {
                     result.refusals.add(refusal);
                     result.refusalDetail = tradeschool$lastRefusalDetail;
-                }
-                // Items outside this profession's remit aren't "rejected" in any meaningful
-                // sense — a librarian is not declining your carrot — so they get no
-                // greyed-out row. Genuine near-misses do.
-                if (!SILENT_REFUSAL.equals(refusal)) {
-                    String rsig = "rejected:" + tradeschool$enchantSignature(stack);
-                    if (!seenSigs.containsKey(rsig) && result.rejected.size() < maxOffers) {
-                        seenSigs.put(rsig, null);
-                        result.rejected.add(new OfferGroup(rsig, slotIdx, stack));
-                    }
                 }
                 continue;
             }
@@ -330,26 +312,19 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
             }
         }
 
-        // Viable offers claim the limit first; rejects only fill what is left over.
-        int spare = Math.max(0, maxOffers - result.groups.size());
-        if (result.rejected.size() > spare) {
-            result.rejected.subList(spare, result.rejected.size()).clear();
-        }
         return result;
     }
 
-    /** Refusal marker meaning "reject, but say nothing". Compared by identity. */
+        ///  Refusal marker meaning "reject, but say nothing". Compared by identity.
     @Unique
     private static final String SILENT_REFUSAL = "tradeschool.refusal.silent";
 
-    /**
-     * A message key for why this villager will not learn from this item, or null if they
-     * will. {@link #SILENT_REFUSAL} rejects without telling the player.
-     *
-     * Returning a reason rather than a boolean lets the caller explain the refusal; several
-     * of these are invisible otherwise, which reads as the mod being broken. Untradable
-     * treasure (Soul Speed, Swift Sneak, Wind Burst) is the most opaque of them.
-     */
+        /// A message key for why this villager will not learn from this item, or null if they
+    /// will. [#SILENT_REFUSAL] rejects without telling the player.
+    ///
+    /// Returning a reason rather than a boolean lets the caller explain the refusal; several
+    /// of these are invisible otherwise, which reads as the mod being broken. Untradable
+    /// treasure (Soul Speed, Swift Sneak, Wind Burst) is the most opaque of them.
     @Unique
     private String tradeschool$refusalReason(ItemStack stack, String professionId,
                                              Villager villager, int villagerLevel) {
@@ -371,7 +346,7 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         if (cx.gid.minecraft.tradeschool.trade.TradeFilter.alreadySells(villager.getOffers(), stack)) {
             return TradeSchoolMessages.REFUSAL_ALREADY_SELLS;
         }
-        if (tradeschool$nothingToLearn(stack, professionId, villagerLevel)) {
+        if (tradeschool$nothingToLearn(stack, professionId, villagerLevel, villager.level().registryAccess())) {
             // Distinguish "never learnable" from "not yet" — the former is otherwise
             // baffling, since levelling the villager will never help.
             var enchs = ModEnchantments.effectiveEnchantments(stack);
@@ -397,10 +372,8 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         return null;
     }
 
-    /**
-     * Signature for dedup: item type + sorted enchantments only (no damage/repair_cost).
-     * Two items with the same type and enchantments collapse to one offer regardless of damage.
-     */
+        /// Signature for dedup: item type + sorted enchantments only (no damage/repair_cost).
+    /// Two items with the same type and enchantments collapse to one offer regardless of damage.
     @Unique
     private String tradeschool$enchantSignature(ItemStack held) {
         StringBuilder sb = new StringBuilder();
@@ -415,18 +388,17 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         return sb.toString();
     }
 
-    /**
-     * Builds one ephemeral teach offer for a given held item.
-     * Cost = the held item (with enchantment predicate, matches any damage).
-     * Result = the learned item (downtiered) if partial learn, or emeralds if full learn.
-     */
+        /// Builds one ephemeral teach offer for a given held item.
+    /// Cost = the held item (with enchantment predicate, matches any damage).
+    /// Result = the learned item (downtiered) if partial learn, or emeralds if full learn.
     @Unique
     private MerchantOffer tradeschool$buildTeachOffer(Villager villager, ItemStack held,
                                                        String professionId, int professionLevel) {
         if (held.isEmpty()) return null;
 
         String label = getProfessionLabel(professionId);
-        var analysisResult = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label);
+        var analysisResult = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label,
+            villager.level().registryAccess());
         var knowledge = analysisResult.knowledge();
 
         // An enchanted book is nothing but its enchantment, so if every one was filtered
@@ -443,8 +415,8 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         boolean fullLearn = EnchantedItemAnalyzer.isFullLearn(held, knowledge);
         if (fullLearn) {
             int sellPrice = ItemPricingCalculator.calculateSellingPrice(knowledge);
-            int payment = Math.max(1, (sellPrice + tradeschool$config().fullLearnPaymentDivisor - 1)
-                / tradeschool$config().fullLearnPaymentDivisor);
+            int payment = Math.max(1, (sellPrice + tradeschool$teaching().fullLearnPaymentDivisor - 1)
+                / tradeschool$teaching().fullLearnPaymentDivisor);
             resultStack = new ItemStack(Items.EMERALD, payment);
         } else {
             // Result built from groupFirst's knowledge. MerchantResultSlotMixin will overwrite
@@ -470,6 +442,10 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
             fullLearn ? resultStack.getCount() + " emeralds" : EnchantedItemAnalyzer.itemDisplayName(resultStack.getItem()),
             fullLearn);
 
+        // Not configurable, because none of these are balance: one use because a lesson
+        // happens once and the offer is withdrawn straight after, no experience because
+        // teaching grants it separately through gossip and orbs, and no price multiplier
+        // because what a lesson costs must not drift with the player's reputation.
         return new MerchantOffer(cost, resultStack, 1, 0, 0.0f);
     }
 
@@ -492,7 +468,7 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         VillagerKnowledgeData kd = VillagerKnowledgeManager.getInstance().getOrCreateData(villager);
         boolean alreadyLearned = kd.getItemKnowledgeAtLevel(professionLevel) != null;
 
-        AABB box = villager.getBoundingBox().inflate(tradeschool$config().teachPreviewRadius);
+        AABB box = villager.getBoundingBox().inflate(tradeschool$interaction().previewRadius);
         List<ServerPlayer> nearby = level.getEntitiesOfClass(ServerPlayer.class, box, p -> true);
 
         Set<UUID> stillInterested = new HashSet<>();
@@ -525,7 +501,8 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
             villager.getBrain().setMemory(MemoryModuleType.LOOK_TARGET, new EntityTracker(player, true));
             villager.getLookControl().setLookAt(player, 30f, 30f);
             String label = getProfessionLabel(professionId);
-            ItemStack showItem = tradeschool$buildPreviewItem(previewItem, professionId, professionLevel, label);
+            ItemStack showItem = tradeschool$buildPreviewItem(previewItem, professionId, professionLevel, label,
+                villager.level().registryAccess());
             villager.setItemSlot(EquipmentSlot.MAINHAND, showItem);
             villager.setDropChance(EquipmentSlot.MAINHAND, 0.0f);
 
@@ -557,11 +534,9 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         }
     }
 
-    /**
-     * A copyrighted item held in either hand that this villager would otherwise have been
-     * interested in. Restricted to the hands because holding one out is the player's way
-     * of offering it; carrying one in a backpack slot is not.
-     */
+        /// A copyrighted item held in either hand that this villager would otherwise have been
+    /// interested in. Restricted to the hands because holding one out is the player's way
+    /// of offering it; carrying one in a backpack slot is not.
     @Unique
     private ItemStack tradeschool$findCurseProtectedInHand(ServerPlayer sp, String professionId, Villager villager) {
         int level = villager.getVillagerData().level();
@@ -587,26 +562,23 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         player.sendSystemMessage(Component.literal(text));
     }
 
-    /**
-     * True if nothing would survive analysis for this villager — an enchanted book whose
-     * every enchantment is out of reach at their level. Such a book would otherwise
-     * produce a teach offer yielding a blank, enchantment-less book.
-     */
+        /// True if nothing would survive analysis for this villager — an enchanted book whose
+    /// every enchantment is out of reach at their level. Such a book would otherwise
+    /// produce a teach offer yielding a blank, enchantment-less book.
     @Unique
-    private boolean tradeschool$nothingToLearn(ItemStack stack, String professionId, int professionLevel) {
+    private boolean tradeschool$nothingToLearn(ItemStack stack, String professionId, int professionLevel,
+            net.minecraft.core.HolderLookup.Provider registries) {
         if (stack.getItem() != Items.ENCHANTED_BOOK) return false;
         String label = getProfessionLabel(professionId);
-        var result = EnchantedItemAnalyzer.analyzeItem(stack, professionLevel, label);
+        var result = EnchantedItemAnalyzer.analyzeItem(stack, professionLevel, label, registries);
         return result.knowledge().getEnchantments().isEmpty();
     }
 
-    /**
-     * The item the villager should look at and preview.
-     *
-     * Mainhand only. The teach scan reaches the whole inventory, but the villager should
-     * visibly react to what the player is holding out — miming an item buried in their
-     * backpack would be meaningless.
-     */
+        /// The item the villager should look at and preview.
+    ///
+    /// Mainhand only. The teach scan reaches the whole inventory, but the villager should
+    /// visibly react to what the player is holding out — miming an item buried in their
+    /// backpack would be meaningless.
     @Unique
     private ItemStack tradeschool$findFirstTeachableItem(ServerPlayer sp, String professionId, Villager villager) {
         int level = villager.getVillagerData().level();
@@ -617,11 +589,12 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
     }
 
     @Unique
-    private ItemStack tradeschool$buildPreviewItem(ItemStack held, String professionId, int professionLevel, String label) {
+    private ItemStack tradeschool$buildPreviewItem(ItemStack held, String professionId, int professionLevel, String label,
+            net.minecraft.core.HolderLookup.Provider registries) {
         if (EnchantedItemAnalyzer.isNetheriteForProfession(held.getItem(), professionId)) {
             return held.copyWithCount(1);
         }
-        var result = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label);
+        var result = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label, registries);
         return result.knowledge().createItemStack();
     }
 
@@ -635,7 +608,8 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         // Mid-sentence, so lower-case: "You can teach this Librarian…".
         String who = cx.gid.minecraft.tradeschool.trade.Describe.villagerLower(
             villager, getProfessionLabel(professionId));
-        var result = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label);
+        var result = EnchantedItemAnalyzer.analyzeItem(held, professionLevel, label,
+            villager.level().registryAccess());
 
         boolean fullLearn = EnchantedItemAnalyzer.isFullLearn(held, result.knowledge());
         String learnDesc = result.learnedDescription();
@@ -650,22 +624,18 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
                 who, learnDesc, tradeschool$shortNoun(held));
     }
 
-    /**
-     * An item named the way a player would say it: "Diamond Sword (Sharpness V, Mending)",
-     * or just the item name when it carries no enchantments.
-     */
+        /// An item named the way a player would say it: "Diamond Sword (Sharpness V, Mending)",
+    /// or just the item name when it carries no enchantments.
     @Unique
     private String tradeschool$describe(ItemStack stack) {
         return cx.gid.minecraft.tradeschool.trade.Describe.item(stack);
     }
 
-    /**
-     * Marks which villager is talking.
-     *
-     * Chat gives no indication of who spoke, and in a village there may be several
-     * candidates within a few blocks. A puff of particles and a mumble from the right
-     * villager answers "which one?" without needing a name tag.
-     */
+        /// Marks which villager is talking.
+    ///
+    /// Chat gives no indication of who spoke, and in a village there may be several
+    /// candidates within a few blocks. A puff of particles and a mumble from the right
+    /// villager answers "which one?" without needing a name tag.
     @Unique
     private void tradeschool$indicateSpeaker(Villager villager) {
         if (!(villager.level() instanceof ServerLevel serverLevel)) return;
@@ -677,30 +647,26 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
             net.minecraft.sounds.SoundSource.NEUTRAL, 0.7f, 1.0f);
     }
 
-    /**
-     * How to address a villager: "Dave the Librarian" when they have been named, "The
-     * librarian" otherwise.
-     *
-     * A named villager is one someone cared enough to name, and calling them "this
-     * villager" after that reads as though the mod has not noticed.
-     */
+        /// How to address a villager: "Dave the Librarian" when they have been named, "The
+    /// librarian" otherwise.
+    ///
+    /// A named villager is one someone cared enough to name, and calling them "this
+    /// villager" after that reads as though the mod has not noticed.
     @Unique
     private String tradeschool$villagerName(Villager villager, String professionId) {
         return cx.gid.minecraft.tradeschool.trade.Describe.villager(
             villager, getProfessionLabel(professionId));
     }
 
-    /**
-     * How to refer to the item the player would hand over: "book", "one", or the item's
-     * own name. "Trade your Enchanted Book with 'Mending'" reads as though the
-     * enchantment matters twice; "trade your book" is what a person would say.
-     */
+        /// How to refer to the item the player would hand over: "book", "one", or the item's
+    /// own name. "Trade your Enchanted Book with 'Mending'" reads as though the
+    /// enchantment matters twice; "trade your book" is what a person would say.
     @Unique
     private String tradeschool$shortNoun(ItemStack stack) {
         return cx.gid.minecraft.tradeschool.trade.Describe.shortNoun(stack);
     }
 
-    /** "Sharpness V", or bare "Mending" for enchantments that only have one level. */
+        ///  "Sharpness V", or bare "Mending" for enchantments that only have one level.
     @Unique
     private String tradeschool$enchantmentName(Holder<Enchantment> ench, int level) {
         return cx.gid.minecraft.tradeschool.trade.Describe.enchantment(ench, level);
@@ -715,7 +681,7 @@ public abstract class VillagerPickupMixin implements IVillagerTeachState {
         String hintKey = getProfessionHint(professionType);
         if (hintKey == null) return;
         serverLevel.getPlayers(player -> {
-            double hintR = tradeschool$config().hintRadius;
+            double hintR = tradeschool$interaction().hintRadius;
             if (player instanceof ServerPlayer sp && sp.distanceToSqr(villager) <= hintR * hintR) {
                 // Only volunteer the hint to a player carrying something this villager could
                 // actually learn. Walking past a village otherwise burns the one-shot hint on

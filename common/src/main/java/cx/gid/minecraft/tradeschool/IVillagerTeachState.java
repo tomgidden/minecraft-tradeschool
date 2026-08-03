@@ -5,11 +5,9 @@ import net.minecraft.world.item.ItemStack;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Shared mixin interface for teaching state on villagers.
- * Implemented by VillagerPickupMixin (on Villager) and read by
- * AbstractVillagerTeachMixin (on AbstractVillager).
- */
+/// Shared mixin interface for teaching state on villagers.
+/// Implemented by VillagerPickupMixin (on Villager) and read by
+/// AbstractVillagerTeachMixin (on AbstractVillager).
 public interface IVillagerTeachState {
     UUID tradeschool$getTeachingPlayer();
     void tradeschool$setTeachingPlayer(UUID uuid);

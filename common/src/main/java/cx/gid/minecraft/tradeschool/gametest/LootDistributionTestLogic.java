@@ -29,7 +29,7 @@ public class LootDistributionTestLogic {
         MinecraftServer server = helper.getLevel().getServer();
         ServerLevel level = server.overworld();
 
-        boolean enabled = LootDistributionManager.getInstance().getConfig().global.enabled;
+        boolean enabled = cx.gid.minecraft.tradeschool.config.Config.get().enabled;
         String mode = enabled ? "TRADESCHOOL" : "VANILLA";
 
         List<String> structureIds = new ArrayList<>(

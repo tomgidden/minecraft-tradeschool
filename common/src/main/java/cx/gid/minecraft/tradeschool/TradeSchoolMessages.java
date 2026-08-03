@@ -4,13 +4,11 @@ import cx.gid.minecraft.common.text.Messages;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.level.ServerPlayer;
 
-/**
- * This mod's message keys, and the {@link Messages} instance that resolves them.
- *
- * The resolution machinery — server-side translation with a per-player fallback — lives in
- * cx.gid.minecraft.common so the other mods in this family can share it. Only the keys are
- * mod-specific, so only they live here.
- */
+/// This mod's message keys, and the [Messages] instance that resolves them.
+///
+/// The resolution machinery — server-side translation with a per-player fallback — lives in
+/// cx.gid.minecraft.common so the other mods in this family can share it. Only the keys are
+/// mod-specific, so only they live here.
 public final class TradeSchoolMessages {
 
     // Refusals — why a villager will not learn from an offered item.
@@ -53,12 +51,12 @@ public final class TradeSchoolMessages {
 
     private TradeSchoolMessages() {}
 
-    /** Resolves for a specific player, in their own language. */
+        ///  Resolves for a specific player, in their own language.
     public static MutableComponent of(ServerPlayer player, String key, Object... args) {
         return MESSAGES.of(player, key, args);
     }
 
-    /** Resolves in English, for the console or an unknown recipient. */
+        ///  Resolves in English, for the console or an unknown recipient.
     public static MutableComponent ofDefault(String key, Object... args) {
         return MESSAGES.ofDefault(key, args);
     }

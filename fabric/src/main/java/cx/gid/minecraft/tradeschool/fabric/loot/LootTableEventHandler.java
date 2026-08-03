@@ -5,11 +5,9 @@ import cx.gid.minecraft.tradeschool.loot.LootDistributionManager;
 import cx.gid.minecraft.tradeschool.loot.function.ApplyCurseOfCopyrightFunction;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 
-/**
- * Fabric-specific event handler for loot table modifications.
- * Registers with Fabric API to intercept loot table loading and
- * delegates to the common LootDistributionManager.
- */
+/// Fabric-specific event handler for loot table modifications.
+/// Registers with Fabric API to intercept loot table loading and
+/// delegates to the common LootDistributionManager.
 public class LootTableEventHandler {
     private final LootDistributionManager manager;
 
@@ -17,9 +15,7 @@ public class LootTableEventHandler {
         this.manager = LootDistributionManager.getInstance();
     }
 
-    /**
-     * Registers the loot table modification event with Fabric API.
-     */
+        /// Registers the loot table modification event with Fabric API.
     public void register() {
         // Initialize manager when loot tables start loading (before first modification)
         LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {

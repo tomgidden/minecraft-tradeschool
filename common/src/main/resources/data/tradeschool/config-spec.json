@@ -1,0 +1,238 @@
+{
+/*
+ * Single source of truth for tradeschool's settings.
+ * Each setting carries four #-suffixed facets alongside it. Stripping the
+ * #-keys leaves the shape of the real config file, so the defaults and the
+ * operator's starting config can both be produced from this mechanically.
+ *
+ *   #comment  what it does, written for the reference file
+ *   #default  benign value, inherited when a config does not mention the key
+ *   #initial  intended value, written into config/tradeschool.json
+ *   #type     Java type. Unused at runtime while the config classes are
+ *             hand-written; present so they could be generated later, and so
+ *             the hand-written ones can be checked against this file.
+ *
+ * Defaults are deliberately benign — zero, false, empty — because config
+ * merges recursively: a file naming one key of a block keeps the block's
+ * other values. Benign defaults make that inheritance harmless. The real
+ * balance lives in #initial and is written into the operator's file, so it
+ * is visible where they edit rather than hidden in the jar.
+ */
+
+  "_version#comment": "Version of this file. When the config classes are generated, they can check this against the reference file's version.",
+  "_version": 2,
+
+  "enabled#comment": "Whether the mod does anything at all.",
+  "enabled#default": false,
+  "enabled#initial": true,
+  "enabled#type": "boolean",
+
+  "debug#comment": "Verbose per-event logging: teach scans, loot modifications, trade generation. These fire constantly; leave off unless diagnosing something.",
+  "debug#default": false,
+  "debug#initial": false,
+  "debug#type": "boolean",
+
+  "loot#comment": "Settings for loot tables. Note, there is also `loot_distribution.json` for the actual tables",
+  "loot": {
+    "found_loot_prefixes#comment": "Loot table prefixes treated as *found* loot. Block drops, mob drops and spawn equipment are excluded by omission: those are not discovered treasure, and cursing them would let players farm the curse rather than find it.",
+    "found_loot_prefixes#default": [],
+    "found_loot_prefixes#initial": ["minecraft:chests/", "minecraft:archaeology/", "minecraft:gameplay/fishing"],
+    "found_loot_prefixes#type": "List<String>"
+  },
+
+  "teaching#comment": "Settings for teaching.",
+  "teaching": {
+    "unlearnable_enchantments#comment": "Enchantments no villager will learn. Namespace optional. Empty means anything can be learned.",
+    "unlearnable_enchantments#default": [],
+    "unlearnable_enchantments#initial": ["minecraft:soul_speed", "minecraft:swift_sneak", "minecraft:wind_burst"],
+    "unlearnable_enchantments#type": "List<String>",
+
+    "single_level_enchantment_minimum_level#comment": "Minimum villager level for a single-level enchantment — Mending, Silk Touch and the like. They have no weaker version to learn first, so villager rank is the only lever available. 1 removes the restriction.",
+    "single_level_enchantment_minimum_level#default": 1,
+    "single_level_enchantment_minimum_level#initial": 3,
+    "single_level_enchantment_minimum_level#type": "int",
+
+    "full_learn_payment_divisor#comment": "Divisor on an item's sell price to get the emerald payment for a full learn. 2 pays the player half what the villager will go on to charge.",
+    "full_learn_payment_divisor#default": 1,
+    "full_learn_payment_divisor#initial": 2,
+    "full_learn_payment_divisor#type": "int",
+
+    "player_xp_multiplier#comment": "Experience orbs the player gets for teaching, as a multiple of what the lesson is worth — trading.learned_trade_xp for the villager's level, the same figure the resulting trade grants. 1.0 pays the player what buying that book from a vanilla librarian would have given them. 0 disables it.",
+    "player_xp_multiplier#default": 0.0,
+    "player_xp_multiplier#initial": 1.0,
+    "player_xp_multiplier#type": "double",
+
+    "villager_xp_multiplier#comment": "Experience for the Villager for being taught, as a multiple of the same figure. 1.0 means a lesson advances a villager exactly as much as selling the book it just learned would — so teaching a novice is worth one sale, not ten. 0 means teaching never levels a villager, and it must earn its promotions by trading.",
+    "villager_xp_multiplier#default": 0.0,
+    "villager_xp_multiplier#initial": 1.0,
+    "villager_xp_multiplier#type": "double",
+
+
+    "reputation#comment": "Gossip granted for teaching. A villager's opinion is the weighted sum of the types it holds, and each prices trades differently. All benign-default to zero so setting one says nothing about the others.",
+    "reputation": {
+
+      "minor_positive#comment": "MINOR_POSITIVE per lesson. Weight 1, caps at 25, decays slowly. Improves prices noticeably without reaching cure-tier discounts.",
+      "minor_positive#default": 0,
+      "minor_positive#initial": 5,
+      "minor_positive#type": "int",
+
+      "major_positive#comment": "MAJOR_POSITIVE per lesson. Weight 5, caps at 20, never decays. This is curing's currency; granting much of it makes teaching permanent.",
+      "major_positive#default": 0,
+      "major_positive#initial": 0,
+      "major_positive#type": "int",
+
+      "minor_negative#comment": "MINOR_NEGATIVE per lesson. Weight -1. Discourages repeat teaching.",
+      "minor_negative#default": 0,
+      "minor_negative#initial": 0,
+      "minor_negative#type": "int",
+
+      "major_negative#comment": "MAJOR_NEGATIVE per lesson. Weight -5.",
+      "major_negative#default": 0,
+      "major_negative#initial": 0,
+      "major_negative#type": "int",
+
+      "trading#comment": "TRADING gossip per lesson. Weight 1, caps at 25, decays faster than MINOR_POSITIVE. An ordinary trade grants 2.",
+      "trading#default": 0,
+      "trading#initial": 0,
+      "trading#type": "int"
+    }
+  },
+
+  "curse_of_copyright#comment": "Settings for the Curse of Copyright. There is no enable or enforce switch. Enforcement is the mechanic's identity, not a feature of it — a curse villagers ignore is not a curse. To remove it from play, stop it appearing: empty loot_probability and zero availability leave it reachable only by command, where honouring it is still correct.",
+  "curse_of_copyright": {
+
+    "loot_probability#comment": "Chance a found enchanted item carries the curse, per structure tier (low, medium, high, top). One value applies to every tier. Empty means it never appears in loot.",
+    "loot_probability#default": [],
+    "loot_probability#initial": [0.1, 0.1, 0.1, 0.1],
+    "loot_probability#type": "List<Double>",
+
+    "book_trade": {
+      "required_level#comment": "Minimum librarian level that stocks blank curse books. 0 disables the trade.",
+      "required_level#default": 0,
+      "required_level#initial": 5,
+      "required_level#type": "int",
+
+      "availability#comment": "Fraction of eligible librarians carrying it, decided from the villager's UUID rather than per restock, so one either always has it or never does. 0 means none do.",
+      "availability#default": 0.0,
+      "availability#initial": 0.5,
+      "availability#type": "double",
+
+      "book_price#comment": "Emerald cost of one blank book. null prices it as an ordinary enchanted book instead of a flat rate.",
+      "book_price#default": null,
+      "book_price#initial": 1,
+      "book_price#type": "Integer",
+
+      "xp#comment": "Villager experience per blank book sold. Only ever offered at level 5, where there is nothing left to level up to, so this exists for operators who lower required_level rather than to affect progression.",
+      "xp#default": 30,
+      "xp#initial": 30,
+      "xp#type": "int",
+
+      "price_multiplier#comment": "How much the price responds to reputation and demand. 0.05 matches vanilla's commodity trades — this is stock for a shop rather than a prize, so it should stay cheap and predictable.",
+      "price_multiplier#default": 0.05,
+      "price_multiplier#initial": 0.05,
+      "price_multiplier#type": "float"
+    }
+  },
+
+  "interaction#comment": "Settings for the chat messages the player receives when close to a villager that can learn",
+  "interaction": {
+    "preview_radius#comment": "Radius in blocks within which a villager previews a held item and comments on it. 0 disables previews.",
+    "preview_radius#default": 0.0,
+    "preview_radius#initial": 5.0,
+    "preview_radius#type": "double",
+
+    "hint_radius#comment": "Radius within which the one-off \"this villager can be taught\" hint is offered.",
+    "hint_radius#default": 0.0,
+    "hint_radius#initial": 8.0,
+    "hint_radius#type": "double"
+  },
+
+  "feedback#comment": "A server-side mod cannot add tooltips or custom UI, so everything it has to say goes through chat, the action bar, or a title.",
+  "feedback": {
+
+    "chat#comment": "Chat messages: previews, refusals, refunds. Persistent and scrollable.",
+    "chat#default": false,
+    "chat#initial": true,
+    "chat#type": "boolean",
+
+    "action_bar#comment": "Action bar, above the hotbar. Unobtrusive, but it cannot be held on screen long enough to read a sentence.",
+    "action_bar#default": false,
+    "action_bar#initial": false,
+    "action_bar#type": "boolean",
+
+    "title#comment": "Centre-screen title on a successful lesson.",
+    "title#default": false,
+    "title#initial": true,
+    "title#type": "boolean",
+
+    "title_timing#comment": "Title timing in ticks: [fade in, hold, fade out]. 20 ticks to the second. Stated as a whole because the three only make sense together.",
+    "title_timing#default": [5, 80, 20],
+    "title_timing#initial": [5, 80, 20],
+    "title_timing#type": "List<Integer>"
+  },
+
+  "trading#comment": "Settings for the trades created by teaching. The standard settings are close to vanilla equivalents.",
+  "trading": {
+    "max_uses#comment": "Uses a learned trade allows before the villager must restock.",
+    "max_uses#default": 0,
+    "max_uses#initial": 12,
+    "max_uses#type": "int",
+
+    "max_teach_offers#comment": "Most teach offers shown at once when a player carries several candidates. Vanilla's trade list scrolls, so this is about clutter rather than space.",
+    "max_teach_offers#default": 0,
+    "max_teach_offers#initial": 6,
+    "max_teach_offers#type": "int",
+
+    "learned_trade_xp#comment": "Villager experience a learned trade grants, indexed by the villager's level (1-5). Matches vanilla's own enchanted-book trades, which give 1, 5, 10, 15 at levels 1-4; vanilla has no book trade at level 5, so 30 follows its other level-5 trades. A flat value would be wrong at both ends: villagers need only 10 experience to leave level 1 but 100 to leave level 4, so one number either trivialises the first promotion or makes the last unreachable within max_uses.",
+    "learned_trade_xp#default": [1, 5, 10, 15, 30],
+    "learned_trade_xp#initial": [1, 5, 10, 15, 30],
+    "learned_trade_xp#type": "List<Integer>",
+
+    "learned_trade_price_multiplier#comment": "How much a learned trade's price responds to reputation and demand. 0.2 is what vanilla uses for enchanted books; its commodity trades use 0.05.",
+    "learned_trade_price_multiplier#default": 0.2,
+    "learned_trade_price_multiplier#initial": 0.2,
+    "learned_trade_price_multiplier#type": "float",
+
+    "book_price_bands#comment": "Emerald cost bands for learned enchanted books, by the enchantment's own cost: common, uncommon, rare, very rare. Stated as a whole because they are one scale; a rare band below an uncommon one would invert the ordering.",
+    "book_price_bands#default": [5, 10, 15, 20],
+    "book_price_bands#initial": [5, 10, 15, 20],
+    "book_price_bands#type": "List<Integer>",
+
+    "book_price_per_level#comment": "Emeralds added per enchantment level above the first, on top of the band. Sharpness III in the common band costs 5 + 2 x 5.",
+    "book_price_per_level#default": 5,
+    "book_price_per_level#initial": 5,
+    "book_price_per_level#type": "int",
+
+    "book_price_secondary#comment": "What the player must supply alongside the emeralds when buying a learned enchanted book, as vanilla's own book trades require a blank book: [item, count]. Empty means emeralds alone. Books only for now — gear would want its own material rather than paper, and that mapping is 26.1 work.",
+    "book_price_secondary#default": [],
+    "book_price_secondary#initial": ["minecraft:book", 1],
+    "book_price_secondary#type": "List<Object>",
+
+    "minimum_price#comment": "Least a learned trade may cost, in emeralds, whatever the bands work out to. Books floor higher than gear by default because a book is pure knowledge — the villager supplies nothing but the enchantment — whereas a cheap tool is mostly its material. [book, item].",
+    "minimum_price#default": [5, 1],
+    "minimum_price#initial": [5, 1],
+    "minimum_price#type": "List<Integer>",
+
+    "maximum_price#comment": "Most a learned trade may cost. 64 is a hard ceiling rather than a balance choice: a trade's cost is one item stack, so a higher number would be silently truncated.",
+    "maximum_price#default": 64,
+    "maximum_price#initial": 64,
+    "maximum_price#type": "int",
+
+    "extra_enchantment_price_divisor#comment": "A book with several enchantments is priced on the dearest, plus each remaining one divided by this. 2 charges half for extras: a two-enchantment book should beat buying both separately, or there is no reason to want one. 1 charges full price for every enchantment.",
+    "extra_enchantment_price_divisor#default": 2,
+    "extra_enchantment_price_divisor#initial": 2,
+    "extra_enchantment_price_divisor#type": "int",
+
+    "fillers#comment": "Commodity trades filling profession levels that would otherwise be empty. Stripping the items a profession can be taught leaves some levels with nothing, and a villager with no trades earns no experience — so it could never reach the level where teaching unlocks. Keyed so entries can be amended, added or removed one at a time: give a key to change a field, or null to delete that filler.",
+    "fillers#default": {},
+    "fillers#initial": {
+      "armorer_l1_coal":      { "profession": "armorer",     "level": 1, "item": "minecraft:coal",    "count": 15, "max_uses": 16, "xp": 2 },
+      "armorer_l2_leather":   { "profession": "armorer",     "level": 2, "item": "minecraft:leather", "count": 6,  "max_uses": 16, "xp": 2 },
+      "weaponsmith_l1_coal":  { "profession": "weaponsmith", "level": 1, "item": "minecraft:coal",    "count": 15, "max_uses": 16, "xp": 2 },
+      "weaponsmith_l2_flint": { "profession": "weaponsmith", "level": 2, "item": "minecraft:flint",   "count": 10, "max_uses": 16, "xp": 2 },
+      "toolsmith_l1_coal":    { "profession": "toolsmith",   "level": 1, "item": "minecraft:coal",    "count": 15, "max_uses": 16, "xp": 2 },
+      "toolsmith_l2_gravel":  { "profession": "toolsmith",   "level": 2, "item": "minecraft:gravel",  "count": 10, "max_uses": 16, "xp": 2 }
+    },
+    "fillers#type": "Map<String, FillerTrade>"
+  }
+}
