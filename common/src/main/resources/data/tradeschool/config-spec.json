@@ -1,23 +1,22 @@
 {
-/*
- * Single source of truth for tradeschool's settings.
- * Each setting carries four #-suffixed facets alongside it. Stripping the
- * #-keys leaves the shape of the real config file, so the defaults and the
- * operator's starting config can both be produced from this mechanically.
- *
- *   #comment  what it does, written for the reference file
- *   #default  benign value, inherited when a config does not mention the key
- *   #initial  intended value, written into config/tradeschool.json
- *   #type     Java type. Unused at runtime while the config classes are
- *             hand-written; present so they could be generated later, and so
- *             the hand-written ones can be checked against this file.
- *
- * Defaults are deliberately benign — zero, false, empty — because config
- * merges recursively: a file naming one key of a block keeps the block's
- * other values. Benign defaults make that inheritance harmless. The real
- * balance lives in #initial and is written into the operator's file, so it
- * is visible where they edit rather than hidden in the jar.
- */
+// Tradeschool's settings.
+//
+// Each setting carries four #-suffixed facets alongside it. Stripping the
+// #-keys leaves the keys of the real config file, so the defaults and the
+// operator's starting config can both be produced from this mechanically.
+//
+//   #comment  what it does, written for the reference file
+//   #default  benign value, inherited when a config does not mention the key
+//   #initial  intended value, written into config/tradeschool.json
+//   #type     Java type. Unused at runtime while the config classes are
+//             hand-written; present so they could be generated later, and so
+//             the hand-written ones can be checked against this file.
+//
+// Defaults are deliberately benign -- zero, false, empty -- because config
+// merges recursively: a file naming one key of a block keeps the block's
+// other values. Benign defaults make that inheritance harmless. The real
+// balance lives in #initial and is written into the operator's file, so it
+// is visible where they edit rather than hidden in the jar.
 
   "_version#comment": "Version of this file. When the config classes are generated, they can check this against the reference file's version.",
   "_version": 2,
@@ -37,7 +36,12 @@
     "found_loot_prefixes#comment": "Loot table prefixes treated as *found* loot. Block drops, mob drops and spawn equipment are excluded by omission: those are not discovered treasure, and cursing them would let players farm the curse rather than find it.",
     "found_loot_prefixes#default": [],
     "found_loot_prefixes#initial": ["minecraft:chests/", "minecraft:archaeology/", "minecraft:gameplay/fishing"],
-    "found_loot_prefixes#type": "List<String>"
+    "found_loot_prefixes#type": "List<String>",
+
+    "archaeology_gear_chance_multiplier#comment": "How likely a brushed block yields enchanted gear, as a multiple of that structure's book_chance in loot_distribution.json. Brushing can only ever produce ONE item, so this mod's gear, then its books, then vanilla's own loot are tried in turn and the first to answer wins. 0.5 means gear is offered at half the rate books are, which keeps gear the scarcer find while letting an operator who tuned a structure's book_chance have gear follow it. Set 0 for no gear from brushing; 1 to offer it as often as books.",
+    "archaeology_gear_chance_multiplier#default": 0.0,
+    "archaeology_gear_chance_multiplier#initial": 0.5,
+    "archaeology_gear_chance_multiplier#type": "float"
   },
 
   "teaching#comment": "Settings for teaching.",
@@ -47,7 +51,7 @@
     "unlearnable_enchantments#initial": ["minecraft:soul_speed", "minecraft:swift_sneak", "minecraft:wind_burst"],
     "unlearnable_enchantments#type": "List<String>",
 
-    "single_level_enchantment_minimum_level#comment": "Minimum villager level for a single-level enchantment — Mending, Silk Touch and the like. They have no weaker version to learn first, so villager rank is the only lever available. 1 removes the restriction.",
+    "single_level_enchantment_minimum_level#comment": "Minimum villager level for a single-level enchantment -- Mending, Silk Touch and the like. They have no weaker version to learn first, so villager rank is the only lever available. 1 removes the restriction.",
     "single_level_enchantment_minimum_level#default": 1,
     "single_level_enchantment_minimum_level#initial": 3,
     "single_level_enchantment_minimum_level#type": "int",
@@ -57,16 +61,28 @@
     "full_learn_payment_divisor#initial": 2,
     "full_learn_payment_divisor#type": "int",
 
-    "player_xp_multiplier#comment": "Experience orbs the player gets for teaching, as a multiple of what the lesson is worth — trading.learned_trade_xp for the villager's level, the same figure the resulting trade grants. 1.0 pays the player what buying that book from a vanilla librarian would have given them. 0 disables it.",
+    "player_xp_multiplier#comment": "Experience orbs the player gets for teaching, as a multiple of what the lesson is worth -- trading.learned_trade_xp for the villager's level, the same figure the resulting trade grants. 1.0 pays the player what buying that book from a vanilla librarian would have given them. 0 disables it.",
     "player_xp_multiplier#default": 0.0,
     "player_xp_multiplier#initial": 1.0,
     "player_xp_multiplier#type": "double",
 
-    "villager_xp_multiplier#comment": "Experience for the Villager for being taught, as a multiple of the same figure. 1.0 means a lesson advances a villager exactly as much as selling the book it just learned would — so teaching a novice is worth one sale, not ten. 0 means teaching never levels a villager, and it must earn its promotions by trading.",
+    "villager_xp_multiplier#comment": "Experience for the Villager for being taught, as a multiple of the same figure. 1.0 means a lesson advances a villager exactly as much as selling the book it just learned would -- so teaching a novice is worth one sale, not ten. 0 means teaching never levels a villager, and it must earn its promotions by trading.",
     "villager_xp_multiplier#default": 0.0,
     "villager_xp_multiplier#initial": 1.0,
     "villager_xp_multiplier#type": "double",
 
+    // Intentionally carries no #initial to keep this setting somewhat… well, not secret, but not obvious either!
+    "allow_netherite": {
+      "armor#comment": "Whether an armorer can be taught netherite armour.",
+      "armor#default": false,
+      "armor#type": "boolean",
+      "tools#comment": "Whether a toolsmith can be taught netherite tools. Includes axes, for both toolsmiths and weaponsmiths.",
+      "tools#default": false,
+      "tools#type": "boolean",
+      "weapons#comment": "Whether a weaponsmith can be taught netherite swords. Axes are covered by tools.",
+      "weapons#default": false,
+      "weapons#type": "boolean"
+    },
 
     "reputation#comment": "Gossip granted for teaching. A villager's opinion is the weighted sum of the types it holds, and each prices trades differently. All benign-default to zero so setting one says nothing about the others.",
     "reputation": {
@@ -98,7 +114,7 @@
     }
   },
 
-  "curse_of_copyright#comment": "Settings for the Curse of Copyright. There is no enable or enforce switch. Enforcement is the mechanic's identity, not a feature of it — a curse villagers ignore is not a curse. To remove it from play, stop it appearing: empty loot_probability and zero availability leave it reachable only by command, where honouring it is still correct.",
+  "curse_of_copyright#comment": "Settings for the Curse of Copyright. To remove it from play, stop it appearing: empty loot_probability and zero availability.",
   "curse_of_copyright": {
 
     "loot_probability#comment": "Chance a found enchanted item carries the curse, per structure tier (low, medium, high, top). One value applies to every tier. Empty means it never appears in loot.",
@@ -127,7 +143,7 @@
       "xp#initial": 30,
       "xp#type": "int",
 
-      "price_multiplier#comment": "How much the price responds to reputation and demand. 0.05 matches vanilla's commodity trades — this is stock for a shop rather than a prize, so it should stay cheap and predictable.",
+      "price_multiplier#comment": "How much the price responds to reputation and demand. 0.05 matches vanilla's commodity trades -- this is stock for a shop rather than a prize, so it should stay cheap and predictable.",
       "price_multiplier#default": 0.05,
       "price_multiplier#initial": 0.05,
       "price_multiplier#type": "float"
@@ -203,12 +219,12 @@
     "book_price_per_level#initial": 5,
     "book_price_per_level#type": "int",
 
-    "book_price_secondary#comment": "What the player must supply alongside the emeralds when buying a learned enchanted book, as vanilla's own book trades require a blank book: [item, count]. Empty means emeralds alone. Books only for now — gear would want its own material rather than paper, and that mapping is 26.1 work.",
+    "book_price_secondary#comment": "What the player must supply alongside the emeralds when buying a learned enchanted book, as vanilla's own book trades require a blank book: [item, count]. Empty means emeralds alone. Books only for now -- gear would want its own material rather than paper, and that mapping is 26.1 work.",
     "book_price_secondary#default": [],
     "book_price_secondary#initial": ["minecraft:book", 1],
     "book_price_secondary#type": "List<Object>",
 
-    "minimum_price#comment": "Least a learned trade may cost, in emeralds, whatever the bands work out to. Books floor higher than gear by default because a book is pure knowledge — the villager supplies nothing but the enchantment — whereas a cheap tool is mostly its material. [book, item].",
+    "minimum_price#comment": "Least a learned trade may cost, in emeralds, whatever the bands work out to. Books floor higher than gear by default because a book is pure knowledge -- the villager supplies nothing but the enchantment -- whereas a cheap tool is mostly its material. [book, item].",
     "minimum_price#default": [5, 1],
     "minimum_price#initial": [5, 1],
     "minimum_price#type": "List<Integer>",
@@ -223,7 +239,7 @@
     "extra_enchantment_price_divisor#initial": 2,
     "extra_enchantment_price_divisor#type": "int",
 
-    "fillers#comment": "Commodity trades filling profession levels that would otherwise be empty. Stripping the items a profession can be taught leaves some levels with nothing, and a villager with no trades earns no experience — so it could never reach the level where teaching unlocks. Keyed so entries can be amended, added or removed one at a time: give a key to change a field, or null to delete that filler.",
+    "fillers#comment": "Commodity trades filling profession levels that would otherwise be empty. Stripping the items a profession can be taught leaves some levels with nothing, and a villager with no trades earns no experience -- so it could never reach the level where teaching unlocks. Keyed so entries can be amended, added or removed one at a time: give a key to change a field, or null to delete that filler.",
     "fillers#default": {},
     "fillers#initial": {
       "armorer_l1_coal":      { "profession": "armorer",     "level": 1, "item": "minecraft:coal",    "count": 15, "max_uses": 16, "xp": 2 },

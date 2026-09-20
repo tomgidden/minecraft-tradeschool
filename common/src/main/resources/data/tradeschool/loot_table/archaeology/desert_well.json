@@ -13,25 +13,28 @@
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:iron_shovel",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 8,
           "name": "minecraft:iron_hoe",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 7,
           "name": "minecraft:fishing_rod",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         }
       ]
     }

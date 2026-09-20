@@ -6,58 +6,94 @@ import cx.gid.minecraft.tradeschool.loot.function.ApplyCurseOfCopyrightFunction;
 import net.fabricmc.fabric.api.loot.v3.LootTableEvents;
 
 /// Fabric-specific event handler for loot table modifications.
-/// Registers with Fabric API to intercept loot table loading and
-/// delegates to the common LootDistributionManager.
-public class LootTableEventHandler {
-    private final LootDistributionManager manager;
+public class LootTableEventHandler
+{
+  private final LootDistributionManager manager;
 
-    public LootTableEventHandler() {
-        this.manager = LootDistributionManager.getInstance();
-    }
+  public LootTableEventHandler()
+  {
+    this.manager = LootDistributionManager.getInstance();
+  }
 
-        /// Registers the loot table modification event with Fabric API.
-    public void register() {
-        // Initialize manager when loot tables start loading (before first modification)
-        LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
-            // Initialize on first loot table load (if not already initialized)
-            if (!manager.isInitialized()) {
-                manager.initializeEarly();
-            }
+  /// Registers the loot table modification event with Fabric API.
+  public void register()
+  {
+    // Initialize manager when loot tables start loading (before first
+    // modification)
+    LootTableEvents.MODIFY.register((key, tableBuilder, source, registries) -> {
+      // Initialize on first loot table load (if not already initialized)
+      if(!manager.isInitialized()) {
+        manager.initializeEarly();
+      }
 
-            // Extract identifier from ResourceKey (format: ResourceKey[minecraft:loot_table / minecraft:chests/ancient_city])
-            String keyStr = key.toString();
-            int slashIndex = keyStr.lastIndexOf(" / ");
-            int endBracket = keyStr.lastIndexOf("]");
-            String lootTableId;
-            if (slashIndex != -1 && endBracket != -1) {
-                lootTableId = keyStr.substring(slashIndex + 3, endBracket);
-            } else {
-                lootTableId = keyStr; // Fallback
-            }
+      // Extract identifier from ResourceKey (format:
+      // ResourceKey[minecraft:loot_table / minecraft:chests/ancient_city])
+      String keyStr  = key.toString();
+      int slashIndex = keyStr.lastIndexOf(" / ");
+      int endBracket = keyStr.lastIndexOf("]");
+      String lootTableId;
+      if(slashIndex != -1 && endBracket != -1) {
+        lootTableId = keyStr.substring(slashIndex + 3, endBracket);
+      }
+      else {
+        lootTableId = keyStr; // Fallback
+      }
 
-            // Shared gate — keep this identical to the NeoForge handler.
-            if (!manager.shouldModifyLootTable(lootTableId)) {
-                return;
-            }
+      // Shared gate -- keep this identical to the NeoForge handler.
+      if(!manager.shouldModifyLootTable(lootTableId)) {
+        return;
+      }
 
-            try {
-                // Apply Curse of Copyright to ALL existing pools (vanilla enchanted items).
-                // Covers every found-loot table, not just the structures configured for
-                // book injection — fishing and archaeology included.
-                if (manager.shouldCurseLootTable(lootTableId)) {
-                    tableBuilder.modifyPools(poolBuilder -> {
-                        poolBuilder.apply(ApplyCurseOfCopyrightFunction.applyCurse());
-                    });
-                    Constants.LOGGER.debug("Applied curse function to existing pools in {}", lootTableId);
-                }
+      try {
+        // Apply Curse of Copyright to ALL existing pools (vanilla enchanted
+        // items)
+        if(manager.shouldCurseLootTable(lootTableId)) {
+          tableBuilder.modifyPools(poolBuilder -> {
+            poolBuilder.apply(ApplyCurseOfCopyrightFunction.applyCurse());
+          });
+          Constants.LOGGER.debug(
+              "Applied curse function to existing pools in {}",
+              lootTableId
+          );
+        }
 
-                // Now add our custom enchanted books (gear injection handled in common)
-                manager.modifyLootTable(lootTableId, tableBuilder, registries);
-            } catch (Exception e) {
-                Constants.LOGGER.error("Failed to modify loot table {}", lootTableId, e);
-            }
-        });
+        // Archaeology cannot simply gain a pool: a brushed block keeps only
+        // loot.getFirst() and discards the rest, so an added pool is thrown
+        // away and the server logs "Expected max 1 loot ... but got 3". Instead
+        // are made mutually exclusive -- ours carries a random-chance condition and
+        // condition and vanilla's carries the inverse, so exactly one yields
+        // and ours gets first refusal. Keep this identical to the NeoForge
+        // handler.
+        if(LootDistributionManager.isArchaeology(lootTableId)) {
+          var ourPool =
+              manager.buildArchaeologyOverridePool(lootTableId, registries);
+          if(ourPool != null) {
+            float chance = manager.archaeologyChance(lootTableId);
+            tableBuilder.modifyPools(
+                poolBuilder
+                -> poolBuilder.when(
+                    net.minecraft.world.level.storage.loot.predicates
+                        .InvertedLootItemCondition
+                        .invert(net.minecraft.world.level.storage.loot
+                                    .predicates.LootItemRandomChanceCondition
+                                    .randomChance(chance))
+                        .build()
+                )
+            );
+            tableBuilder.withPool(ourPool);
+            Constants.debug("Archaeology override for {} at chance {}", lootTableId, chance);
+          }
+          return;
+        }
 
-        Constants.LOGGER.info("Registered loot table modification handler");
-    }
+        // Now add our custom enchanted books (gear injection handled in common)
+        manager.modifyLootTable(lootTableId, tableBuilder, registries);
+      }
+      catch(Exception e) {
+        Constants.LOGGER.error("Failed to modify loot table {}", lootTableId, e);
+      }
+    });
+
+    Constants.LOGGER.info("Registered loot table modification handler");
+  }
 }

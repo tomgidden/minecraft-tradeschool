@@ -17,46 +17,45 @@ import org.jetbrains.annotations.Nullable;
 /// with prices based on material, type, and enchantments.
 ///
 /// For Weaponsmiths, Toolsmiths, Armourers, and Fletchers.
-public class LearnedItemTradeFactory {
+public class LearnedItemTradeFactory
+{
+  private final ItemKnowledge itemKnowledge;
 
-    private final ItemKnowledge itemKnowledge;
+  public LearnedItemTradeFactory(ItemKnowledge itemKnowledge)
+  {
+    this.itemKnowledge = itemKnowledge;
+  }
 
-    public LearnedItemTradeFactory(ItemKnowledge itemKnowledge) {
-        this.itemKnowledge = itemKnowledge;
+  @Nullable
+  public MerchantOffer getOffer(ServerLevel level, Entity trader, RandomSource random)
+  {
+    if(!(trader instanceof Villager)) {
+      return null;
     }
 
-    @Nullable
-    public MerchantOffer getOffer(ServerLevel level, Entity trader, RandomSource random) {
-        if (!(trader instanceof Villager)) {
-            return null;
-        }
+    // Create the enchanted item from knowledge
+    ItemStack offeredItem = itemKnowledge.createItemStack();
 
-        // Create the enchanted item from knowledge
-        ItemStack offeredItem = itemKnowledge.createItemStack();
+    Constants.debug("LearnedItemTrade: offering {} with {} enchantments for {} emeralds (baseItem={})", offeredItem.getItem(), offeredItem.getEnchantments().size(), ItemPricingCalculator.calculateSellingPrice(itemKnowledge), itemKnowledge.getBaseItem().unwrapKey().map(k -> k.toString()).orElse("?"));
 
-        Constants.debug("LearnedItemTrade: offering {} with {} enchantments for {} emeralds (baseItem={})",
-            offeredItem.getItem(), offeredItem.getEnchantments().size(),
-            ItemPricingCalculator.calculateSellingPrice(itemKnowledge),
-            itemKnowledge.getBaseItem().unwrapKey().map(k -> k.toString()).orElse("?"));
+    // Calculate price based on material and enchantments
+    int price = ItemPricingCalculator.calculateSellingPrice(itemKnowledge);
 
-        // Calculate price based on material and enchantments
-        int price = ItemPricingCalculator.calculateSellingPrice(itemKnowledge);
+    var config = cx.gid.minecraft.tradeschool.config.Config.get().trading;
+    price      = Math.max(config.minimumItemPrice(), Math.min(config.maximumPrice, price));
 
-        var config = cx.gid.minecraft.tradeschool.config.Config.get().trading;
-        price = Math.max(config.minimumItemPrice(), Math.min(config.maximumPrice, price));
-
-        // Create the trade offer
-        // Format: Player pays emeralds → Gets enchanted item
-        // Same settings as a learned book: this is the gear equivalent, and a smith whose
-        // lessons advanced them at a different rate from a librarian's would be arbitrary.
-        // Experience is fixed by the level the lesson was given at, not the villager's
-        // current one — see LearnedTradeFactory for why that distinction matters.
-        return new MerchantOffer(
-                new ItemCost(Items.EMERALD, price),
-                offeredItem.copy(),
-                config.maxUses,
-                config.xpForLevel(itemKnowledge.getLearnedAtLevel()),
-                config.learnedTradePriceMultiplier
-        );
-    }
+    // Create the trade offer
+    // Format: Player pays emeralds → Gets enchanted item
+    // Same settings as a learned book: this is the gear equivalent, and a smith whose
+    // lessons advanced them at a different rate from a librarian's would be arbitrary.
+    // Experience is fixed by the level the lesson was given at, not the villager's
+    // current one -- see LearnedTradeFactory for why that distinction matters.
+    return new MerchantOffer(
+        new ItemCost(Items.EMERALD, price),
+        offeredItem.copy(),
+        config.maxUses,
+        config.xpForLevel(itemKnowledge.getLearnedAtLevel()),
+        config.learnedTradePriceMultiplier
+    );
+  }
 }

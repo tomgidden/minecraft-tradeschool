@@ -13,34 +13,38 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Villager.class)
-public abstract class VillagerEntityMixin implements VillagerEntityAccessor {
+public abstract class VillagerEntityMixin implements VillagerEntityAccessor
+{
+  @Unique
+  private CompoundTag tradeschool$persistentData = new CompoundTag();
 
-    @Unique
-    private CompoundTag tradeschool$persistentData = new CompoundTag();
+  @Override
+  public CompoundTag tradeschool$getPersistentData()
+  {
+    return this.tradeschool$persistentData;
+  }
 
-    @Override
-    public CompoundTag tradeschool$getPersistentData() {
-        return this.tradeschool$persistentData;
+  @Override
+  public void tradeschool$setPersistentData(CompoundTag data)
+  {
+    this.tradeschool$persistentData = data;
+  }
+
+  @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
+  private void onSave(ValueOutput output, CallbackInfo ci)
+  {
+    if(!this.tradeschool$persistentData.isEmpty()) {
+      output.store("TradeSchool", CompoundTag.CODEC, this.tradeschool$persistentData);
     }
+  }
 
-    @Override
-    public void tradeschool$setPersistentData(CompoundTag data) {
+  @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
+  private void onLoad(ValueInput input, CallbackInfo ci)
+  {
+    input.read("TradeSchool", CompoundTag.CODEC).ifPresent(data -> {
+      if(!data.isEmpty()) {
         this.tradeschool$persistentData = data;
-    }
-
-    @Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
-    private void onSave(ValueOutput output, CallbackInfo ci) {
-        if (!this.tradeschool$persistentData.isEmpty()) {
-            output.store("TradeSchool", CompoundTag.CODEC, this.tradeschool$persistentData);
-        }
-    }
-
-    @Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
-    private void onLoad(ValueInput input, CallbackInfo ci) {
-        input.read("TradeSchool", CompoundTag.CODEC).ifPresent(data -> {
-            if (!data.isEmpty()) {
-                this.tradeschool$persistentData = data;
-            }
-        });
-    }
+      }
+    });
+  }
 }

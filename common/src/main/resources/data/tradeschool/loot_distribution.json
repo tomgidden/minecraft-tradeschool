@@ -1,7 +1,7 @@
 {
   "//": "Loot table data: which enchantments appear where, and at what level. This is bundled data, not settings \u2014 operator-tunable behaviour lives in config/tradeschool.json. Override this with a datapack rather than editing the jar.",
   "version": 1,
-  "//max_enchantment_level_by_tier": "Highest enchantment level a structure of each tier may yield, indexed by the tier named in each structure below. Villages and fishing are LOW and cap at 2, so an early-game chest can hold Sharpness II but never Sharpness V; ancient cities and end cities are TOP and cap at 5. This is what keeps enchantment strength tied to how far the player has travelled, rather than to how many chests they have opened.",
+  "//max_enchantment_level_by_tier": "Highest enchantment level a structure of each tier may yield, indexed by the tier named in each structure below. Villages and fishing are LOW and cap at 2, so an early-game chest can hold Sharpness II but never Sharpness V; ancient cities and end cities are TOP and cap at 5",
   "max_enchantment_level_by_tier": {
     "LOW": 2,
     "MEDIUM": 3,
@@ -89,9 +89,51 @@
         "PROTECTION"
       ],
       "crossover_categories": {
-        "UTILITY": 0.05
+        "UTILITY": 0.05,
+        "WATER": 0.05,
+        "RARE": 0.05
       },
-      "custom_enchantments": {}
+      "custom_enchantments": {
+        "minecraft:punch": {
+          "weight": 16
+        },
+        "minecraft:smite": {
+          "weight": 16
+        },
+        "minecraft:bane_of_arthropods": {
+          "weight": 16
+        },
+        "minecraft:protection": {
+          "weight": 7,
+          "max_level": 2
+        },
+        "minecraft:depth_strider": {
+          "weight": 8
+        },
+        "minecraft:respiration": {
+          "weight": 8
+        },
+        "minecraft:vanishing_curse": {
+          "weight": 8
+        },
+        "minecraft:feather_falling": {
+          "weight": 8
+        },
+        "minecraft:power": {
+          "weight": 8
+        },
+        "minecraft:projectile_protection": {
+          "weight": 8
+        },
+        "minecraft:mending": {
+          "weight": 3,
+          "max_level": 2
+        },
+        "minecraft:unbreaking": {
+          "weight": 3,
+          "max_level": 2
+        }
+      }
     },
     "minecraft:chests/village/village_desert_house": {
       "enabled": true,
@@ -104,11 +146,48 @@
       ],
       "crossover_categories": {
         "NETHER": 0.08,
-        "UTILITY": 0.05
+        "UTILITY": 0.05,
+        "WATER": 0.05,
+        "RARE": 0.05
       },
       "custom_enchantments": {
         "minecraft:fire_protection": {
-          "weight": 15,
+          "weight": 16
+        },
+        "minecraft:thorns": {
+          "weight": 16
+        },
+        "minecraft:infinity": {
+          "weight": 16
+        },
+        "minecraft:efficiency": {
+          "weight": 7,
+          "max_level": 2
+        },
+        "minecraft:depth_strider": {
+          "weight": 8
+        },
+        "minecraft:respiration": {
+          "weight": 8
+        },
+        "minecraft:vanishing_curse": {
+          "weight": 8
+        },
+        "minecraft:feather_falling": {
+          "weight": 8
+        },
+        "minecraft:power": {
+          "weight": 8
+        },
+        "minecraft:projectile_protection": {
+          "weight": 8
+        },
+        "minecraft:mending": {
+          "weight": 3,
+          "max_level": 2
+        },
+        "minecraft:unbreaking": {
+          "weight": 3,
           "max_level": 2
         }
       }
@@ -123,9 +202,51 @@
         "PROTECTION"
       ],
       "crossover_categories": {
-        "UTILITY": 0.05
+        "UTILITY": 0.05,
+        "WATER": 0.05,
+        "RARE": 0.05
       },
-      "custom_enchantments": {}
+      "custom_enchantments": {
+        "minecraft:knockback": {
+          "weight": 16
+        },
+        "minecraft:binding_curse": {
+          "weight": 16
+        },
+        "minecraft:sweeping_edge": {
+          "weight": 16
+        },
+        "minecraft:sharpness": {
+          "weight": 7,
+          "max_level": 2
+        },
+        "minecraft:depth_strider": {
+          "weight": 8
+        },
+        "minecraft:respiration": {
+          "weight": 8
+        },
+        "minecraft:vanishing_curse": {
+          "weight": 8
+        },
+        "minecraft:feather_falling": {
+          "weight": 8
+        },
+        "minecraft:power": {
+          "weight": 8
+        },
+        "minecraft:projectile_protection": {
+          "weight": 8
+        },
+        "minecraft:mending": {
+          "weight": 3,
+          "max_level": 2
+        },
+        "minecraft:unbreaking": {
+          "weight": 3,
+          "max_level": 2
+        }
+      }
     },
     "minecraft:chests/village/village_snowy_house": {
       "enabled": true,
@@ -137,11 +258,48 @@
         "PROTECTION"
       ],
       "crossover_categories": {
-        "UTILITY": 0.05
+        "UTILITY": 0.05,
+        "WATER": 0.05,
+        "RARE": 0.05
       },
       "custom_enchantments": {
+        "minecraft:aqua_affinity": {
+          "weight": 16
+        },
+        "minecraft:looting": {
+          "weight": 16
+        },
         "minecraft:frost_walker": {
-          "weight": 12,
+          "weight": 16
+        },
+        "minecraft:silk_touch": {
+          "weight": 7,
+          "max_level": 2
+        },
+        "minecraft:depth_strider": {
+          "weight": 8
+        },
+        "minecraft:respiration": {
+          "weight": 8
+        },
+        "minecraft:vanishing_curse": {
+          "weight": 8
+        },
+        "minecraft:feather_falling": {
+          "weight": 8
+        },
+        "minecraft:power": {
+          "weight": 8
+        },
+        "minecraft:projectile_protection": {
+          "weight": 8
+        },
+        "minecraft:mending": {
+          "weight": 3,
+          "max_level": 2
+        },
+        "minecraft:unbreaking": {
+          "weight": 3,
           "max_level": 2
         }
       }
@@ -156,9 +314,51 @@
         "PROTECTION"
       ],
       "crossover_categories": {
-        "UTILITY": 0.05
+        "UTILITY": 0.05,
+        "WATER": 0.05,
+        "RARE": 0.05
       },
-      "custom_enchantments": {}
+      "custom_enchantments": {
+        "minecraft:blast_protection": {
+          "weight": 16
+        },
+        "minecraft:fire_aspect": {
+          "weight": 16
+        },
+        "minecraft:flame": {
+          "weight": 16
+        },
+        "minecraft:fortune": {
+          "weight": 7,
+          "max_level": 2
+        },
+        "minecraft:depth_strider": {
+          "weight": 8
+        },
+        "minecraft:respiration": {
+          "weight": 8
+        },
+        "minecraft:vanishing_curse": {
+          "weight": 8
+        },
+        "minecraft:feather_falling": {
+          "weight": 8
+        },
+        "minecraft:power": {
+          "weight": 8
+        },
+        "minecraft:projectile_protection": {
+          "weight": 8
+        },
+        "minecraft:mending": {
+          "weight": 3,
+          "max_level": 2
+        },
+        "minecraft:unbreaking": {
+          "weight": 3,
+          "max_level": 2
+        }
+      }
     },
     "minecraft:chests/shipwreck_treasure": {
       "enabled": true,
@@ -875,6 +1075,272 @@
       ],
       "crossover_categories": {
         "UTILITY": 0.12
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/shipwreck_supply": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.08,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/shipwreck_map": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.1,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/abandoned_camp_common_chest": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.25,
+      "primary_categories": [
+        "UTILITY",
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.1
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/abandoned_camp_secret_chest": {
+      "enabled": true,
+      "tier": "MEDIUM",
+      "rolls_per_chest": 1,
+      "book_chance": 0.45,
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "RARE": 0.15,
+        "PROTECTION": 0.1
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/trial_chambers/entrance": {
+      "enabled": true,
+      "tier": "MEDIUM",
+      "rolls_per_chest": 1,
+      "book_chance": 0.2,
+      "primary_categories": [
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/trial_chambers/intersection": {
+      "enabled": true,
+      "tier": "HIGH",
+      "rolls_per_chest": 1,
+      "book_chance": 0.3,
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/trial_chambers/supply": {
+      "enabled": true,
+      "tier": "MEDIUM",
+      "rolls_per_chest": 1,
+      "book_chance": 0.15,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/trial_chambers/reward_common": {
+      "enabled": true,
+      "tier": "HIGH",
+      "rolls_per_chest": 1,
+      "book_chance": 0.3,
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/trial_chambers/reward_ominous": {
+      "enabled": true,
+      "tier": "HIGH",
+      "rolls_per_chest": 1,
+      "book_chance": 0.45,
+      "primary_categories": [
+        "COMBAT",
+        "PROTECTION"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/trial_chambers/reward_ominous_common": {
+      "enabled": true,
+      "tier": "HIGH",
+      "rolls_per_chest": 1,
+      "book_chance": 0.35,
+      "primary_categories": [
+        "COMBAT",
+        "UTILITY"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_weaponsmith": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.3,
+      "primary_categories": [
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.1
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_armorer": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.3,
+      "primary_categories": [
+        "PROTECTION"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.1
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_toolsmith": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.3,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "COMBAT": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_fletcher": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.25,
+      "primary_categories": [
+        "COMBAT"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_fisher": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.25,
+      "primary_categories": [
+        "WATER"
+      ],
+      "crossover_categories": {
+        "UTILITY": 0.1
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_mason": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.2,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_cartographer": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.25,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "RARE": 0.05
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_temple": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.3,
+      "primary_categories": [
+        "RARE"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.1
+      },
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_shepherd": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.15,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_butcher": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.15,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {},
+      "custom_enchantments": {}
+    },
+    "minecraft:chests/village/village_tannery": {
+      "enabled": true,
+      "tier": "LOW",
+      "rolls_per_chest": 1,
+      "book_chance": 0.15,
+      "primary_categories": [
+        "UTILITY"
+      ],
+      "crossover_categories": {
+        "PROTECTION": 0.05
       },
       "custom_enchantments": {}
     }

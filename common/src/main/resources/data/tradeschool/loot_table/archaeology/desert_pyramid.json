@@ -13,49 +13,55 @@
           "type": "minecraft:item",
           "weight": 15,
           "name": "minecraft:iron_sword",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:iron_pickaxe",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 12,
           "name": "minecraft:bow",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 10,
           "name": "minecraft:iron_chestplate",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 6,
           "name": "minecraft:crossbow",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         },
         {
           "type": "minecraft:item",
           "weight": 5,
           "name": "minecraft:diamond_sword",
-          "functions": [
-            { "function": "minecraft:enchant_randomly", "options": "#minecraft:on_random_loot" }
-          ]
+          "modifier": {
+            "type": "minecraft:enchant_randomly",
+            "options": "#minecraft:on_random_loot"
+          }
         }
       ]
     }

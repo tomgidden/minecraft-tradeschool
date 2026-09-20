@@ -1,6 +1,6 @@
-**Minecraft 26.x | Fabric and NeoForge**
+**Minecraft 26.3 | Fabric and NeoForge**
 
-Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items — they'll learn and resell what you teach!
+Proof-of-concept of an alternative Villager Trading mechanic using a teaching system, to encourage exploration and reduce random grind. Teach librarians, weaponsmiths, toolsmiths, armourers, and fletchers by selling them enchanted items, and they'll use those to learn more trades.
 
 Install one of these to your server's `mods/` folder (or run Open To LAN on a singleplayer world)
 

@@ -7,6 +7,6 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(AbstractVillager.class)
 public interface AbstractVillagerAccessor {
-    @Accessor("tradingPlayer")
-    Player getTradingPlayer();
+  @Accessor("tradingPlayer")
+  Player getTradingPlayer();
 }

@@ -13,8 +13,8 @@ import java.nio.file.Path;
 ///
 /// ### Why the config file is written, not just read
 ///
-/// The defaults compiled into the mod are deliberately harmless — zeroes and
-/// falses — so that a config naming one field of a block does not silently
+/// The defaults compiled into the mod are deliberately harmless -- zeroes and
+/// falses -- so that a config naming one field of a block does not silently
 /// inherit meaningful values for the rest. That makes merging safe, but it means
 /// the defaults alone would leave the mod doing nothing.
 ///
@@ -23,38 +23,43 @@ import java.nio.file.Path;
 /// advances, for settings the file has no opinion about. An operator sees the
 /// real balance in the file they edit, and a setting introduced by a later
 /// version arrives with its intended value rather than a benign one.
-public final class ConfigLoader {
-
-    /// Current schema version.
+public final class ConfigLoader
+{
+  /// Current schema version.
   ///
   /// Advance this when settings are added, renamed or change meaning, and add a
   /// matching step to [#MIGRATION]. Adding a setting counts: that is how
   /// its intended value reaches configs that already exist.
-  public static final int VERSION = 2;
+  // 3: added loot.archaeology_gear_chance_multiplier. A pure addition, so no MIGRATION
+  // step is needed -- the bump is what pushes its initial value into existing configs.
+  public static final int VERSION = 3;
 
   private static final Path CONFIG =
       Path.of("config", Constants.MOD_ID + ".json");
 
-    /// The bundled specification: every setting, with its comment, benign default
-  /// and intended value. Loaded once — it is a jar resource and cannot change at
+  /// The bundled specification: every setting, with its comment, benign default
+  /// and intended value. Loaded once -- it is a jar resource and cannot change at
   /// runtime.
   private static final ConfigSpec SPEC = ConfigSpec.load(
-      ConfigLoader.class, "/data/" + Constants.MOD_ID + "/config-spec.json");
+      ConfigLoader.class, "/data/" + Constants.MOD_ID + "/config-spec.json"
+  );
 
   private static final JsonConfig.Log LOG = new JsonConfig.Log() {
     @Override
-    public void info(String message) {
+    public void info(String message)
+    {
       Constants.LOGGER.info(message);
     }
     @Override
-    public void warn(String message) {
+    public void warn(String message)
+    {
       Constants.LOGGER.warn(message);
     }
   };
 
   private ConfigLoader() {}
 
-    /// Where each version 1 setting moved to.
+  /// Where each version 1 setting moved to.
   ///
   /// Version 1 kept everything in one `global` block inside the loot table
   /// file. Almost all of it survived the split unchanged apart from its address,
@@ -66,7 +71,7 @@ public final class ConfigLoader {
   /// and
   /// `default_crossover_chance`, which nothing ever read, and
   /// `curse_of_copyright.enabled` / `enforced`, which no longer
-  /// exist — enforcement is not optional. An operator who disabled the curse
+  /// exist -- enforcement is not optional. An operator who disabled the curse
   /// should set
   /// `loot_probability` to `[]` and `availability` to `0`.
   private static final String[][] V1_MOVES = {
@@ -104,7 +109,7 @@ public final class ConfigLoader {
       {"global.trade.max_teach_offers", "trading.max_teach_offers"},
   };
 
-    /// Rewrites older configs.
+  /// Rewrites older configs.
   ///
   /// Version 1 stated its settings in a `global` block, under different
   /// names and in a different file. Everything an operator had chosen is carried
@@ -113,11 +118,12 @@ public final class ConfigLoader {
   /// server behaves without anybody noticing. The three settings that genuinely
   /// changed shape are converted in code below; the rest are moves, listed in
   /// [#V1_MOVES].
-  private static final JsonConfig.Migration MIGRATION = (root, fromVersion) -> {
-    if (fromVersion >= 2 || !root.has("global"))
+  private static final JsonConfig.Migration MIGRATION = (root, fromVersion) ->
+  {
+    if(fromVersion >= 2 || !root.has("global"))
       return;
 
-    for (String[] move : V1_MOVES) {
+    for(String[] move: V1_MOVES) {
       JsonConfig.move(root, move[0], move[1]);
     }
 
@@ -133,34 +139,36 @@ public final class ConfigLoader {
     root.remove("categories");
     root.remove("version");
 
-    Constants.LOGGER.info("Migrated config/{}.json from the version 1 " +
-                          "layout. Loot table definitions in "
-                              + "it were dropped — those are bundled data " +
-                                "now, overridable with a datapack.",
+    Constants.LOGGER.info("Migrated config/{}.json from the version 1 "
+                              + "layout. Loot table definitions in "
+                              + "it were dropped -- those are bundled data "
+                              + "now, overridable with a datapack.",
                           Constants.MOD_ID);
   };
 
-    /// A single rate becomes one per structure tier: the same value, stated four
+  /// A single rate becomes one per structure tier: the same value, stated four
   /// times.
-  private static void migrateCurseProbability(JsonObject root) {
+  private static void migrateCurseProbability(JsonObject root)
+  {
     JsonElement rate = JsonConfig.remove(root, "global.curse_probability");
-    if (rate == null || !rate.isJsonPrimitive())
+    if(rate == null || !rate.isJsonPrimitive())
       return;
     JsonArray perTier = new JsonArray();
-    for (int i = 0; i < 4; i++)
+    for(int i = 0; i < 4; i++)
       perTier.add(rate.getAsDouble());
     JsonConfig.set(root, "curse_of_copyright.loot_probability", perTier);
   }
 
-    ///  Three separate tick counts become one [fade in, hold, fade out] triple.
-  private static void migrateTitleTiming(JsonObject root) {
+  ///  Three separate tick counts become one [fade in, hold, fade out] triple.
+  private static void migrateTitleTiming(JsonObject root)
+  {
     JsonElement in =
         JsonConfig.remove(root, "global.feedback.title_fade_in_ticks");
     JsonElement stay =
         JsonConfig.remove(root, "global.feedback.title_stay_ticks");
     JsonElement out =
         JsonConfig.remove(root, "global.feedback.title_fade_out_ticks");
-    if (in == null && stay == null && out == null)
+    if(in == null && stay == null && out == null)
       return;
 
     JsonArray timing = new JsonArray();
@@ -170,73 +178,75 @@ public final class ConfigLoader {
     JsonConfig.set(root, "feedback.title_timing", timing);
   }
 
-    ///  Four named price fields plus a surcharge become one ordered scale.
-  private static void migrateBookPriceBands(JsonObject root) {
-    String[] names = {"common", "uncommon", "rare", "very_rare", "per_level"};
+  ///  Four named price fields plus a surcharge become one ordered scale.
+  private static void migrateBookPriceBands(JsonObject root)
+  {
+    String[] names  = {"common", "uncommon", "rare", "very_rare", "per_level"};
     int[] fallbacks = {5, 10, 15, 20, 5};
 
     JsonArray bands = new JsonArray();
-    boolean any = false;
-    for (int i = 0; i < names.length; i++) {
+    boolean any     = false;
+    for(int i = 0; i < names.length; i++) {
       JsonElement value =
           JsonConfig.remove(root, "global.trade.book_price_" + names[i]);
       any |= value != null;
       bands.add(value != null ? value.getAsInt() : fallbacks[i]);
     }
-    if (any)
+    if(any)
       JsonConfig.set(root, "trading.book_price_bands", bands);
   }
 
-    /// A list of fillers becomes a keyed map, and `material` becomes `item`.
+  /// A list of fillers becomes a keyed map, and `material` becomes `item`.
   ///
   /// Keys are synthesised from what the filler is, matching the naming the
   /// shipped set uses (`armorer_l1_coal`), so an operator's own entries
   /// sit alongside the defaults and can be amended the same way. A list could
   /// not express that: amending one entry meant restating all of them.
-  private static void migrateFillers(JsonObject root) {
+  private static void migrateFillers(JsonObject root)
+  {
     JsonElement existing = JsonConfig.remove(root, "global.trade.fillers");
-    if (existing == null || !existing.isJsonArray())
+    if(existing == null || !existing.isJsonArray())
       return;
 
     JsonObject keyed = new JsonObject();
-    int unnamed = 0;
-    for (JsonElement element : existing.getAsJsonArray()) {
-      if (!element.isJsonObject())
+    int unnamed      = 0;
+    for(JsonElement element: existing.getAsJsonArray()) {
+      if(!element.isJsonObject())
         continue;
       JsonObject filler = element.getAsJsonObject();
 
       // "material" was renamed "item"; the value is unchanged.
-      if (filler.has("material")) {
+      if(filler.has("material")) {
         filler.add("item", filler.remove("material"));
       }
 
       keyed.add(fillerKey(filler, ++unnamed), filler);
     }
-    if (!keyed.isEmpty())
+    if(!keyed.isEmpty())
       JsonConfig.set(root, "trading.fillers", keyed);
   }
 
-    /// Names a filler after its profession, level and item — e.g. `armorer_l1_coal`.
-  private static String fillerKey(JsonObject filler, int ordinal) {
+  /// Names a filler after its profession, level and item -- e.g. `armorer_l1_coal`.
+  private static String fillerKey(JsonObject filler, int ordinal)
+  {
     String profession = filler.has("profession")
-                            ? filler.get("profession").getAsString()
-                            : "filler";
-    String item = filler.has("item")
-                      ? filler.get("item").getAsString().replaceAll("^.*:", "")
-                      : String.valueOf(ordinal);
-    int level = filler.has("level") ? filler.get("level").getAsInt() : 1;
+        ? filler.get("profession").getAsString()
+        : "filler";
+    String item       = filler.has("item")
+              ? filler.get("item").getAsString().replaceAll("^.*:", "")
+              : String.valueOf(ordinal);
+    int level         = filler.has("level") ? filler.get("level").getAsInt() : 1;
     return profession + "_l" + level + "_" + item;
   }
 
-    /// Reads the operator's config over the benign defaults, tops it up with any
+  /// Reads the operator's config over the benign defaults, tops it up with any
   /// intended values it does not mention, and refreshes the generated reference.
-  public static TradeSchoolConfig load() {
+  public static TradeSchoolConfig load()
+  {
     // Migrate if needed, and refresh the reference file documenting this build.
     // The config it returns is discarded: the top-up below may add to the file,
     // and the read after it is what this session actually runs on.
-    JsonConfig.loadAndDocument(CONFIG, TradeSchoolConfig::new, VERSION,
-                               MIGRATION, Constants.MOD_NAME, initialValues(),
-                               LOG);
+    JsonConfig.loadAndDocument(CONFIG, TradeSchoolConfig::new, VERSION, MIGRATION, Constants.MOD_NAME, initialValues(), LOG);
 
     JsonConfig.ensureInitialValues(CONFIG, initialValues(), VERSION, LOG);
 
@@ -244,17 +254,25 @@ public final class ConfigLoader {
     // than the next: an operator restarting to see a setting appear would then
     // have to restart again for it to apply.
     TradeSchoolConfig effective = JsonConfig.load(
-        CONFIG, new TradeSchoolConfig(), VERSION, MIGRATION, LOG);
+        CONFIG,
+        new TradeSchoolConfig(),
+        VERSION,
+        MIGRATION,
+        LOG
+    );
     effective.applyDefaults();
     return effective;
   }
 
-    /// The balance the mod is designed around, as opposed to the benign values it
+  /// The balance the mod is designed around, as opposed to the benign values it
   /// falls back to. Written into the operator's file for any key the file does
   /// not mention.
   ///
   /// Read from the bundled spec rather than built here: the spec already has to
   /// state these values in order to document them, and stating them twice is how
   /// the file an operator reads and the values they actually run drift apart.
-  private static JsonObject initialValues() { return SPEC.initialValues(); }
+  private static JsonObject initialValues()
+  {
+    return SPEC.initialValues();
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "_comment": "Resolved server-side by TradeSchoolMessages and sent as a translatableWithFallback, so unmodded clients read them in their own language and modded clients translate locally. §-codes highlight only the pertinent detail — the enchantment, or the limitation — so the eye lands on what changed rather than on the whole sentence.",
+  "//": "Resolved server-side by TradeSchoolMessages and sent as a translatableWithFallback, so unmodded clients read them in their own language and modded clients translate locally. §-codes highlight only the pertinent detail -- the enchantment, or the limitation -- so the eye lands on what changed rather than on the whole sentence.",
 
   "enchantment.tradeschool.curse_of_copyright.desc": "Prevents villagers from learning this enchantment",
 
@@ -20,11 +20,11 @@
 
   "tradeschool.preview.netherite": "Villagers cannot learn to craft §enetherite§r items.",
   "tradeschool.preview.full_learn": "You can teach %1$s to make copies of your %2$s.",
-  "tradeschool.preview.partial_learn": "You can teach %1$s to make %2$s from your %3$s — but it will be used up.",
+  "tradeschool.preview.partial_learn": "You can teach %1$s to make %2$s from your %3$s -- but it will be used up.",
 
   "tradeschool.refusal.worn_armor": "%s can only learn from armor you're holding, not wearing.",
   "tradeschool.trade.full_learn": "This trade would teach %1$s to make copies of your %2$s.",
-  "tradeschool.trade.partial_learn": "This trade would teach %1$s to make %2$s — the rest won't carry over.",
+  "tradeschool.trade.partial_learn": "This trade would teach %1$s to make %2$s -- the rest won't carry over.",
 
   "tradeschool.taught.learned": "%1$s has learned to make %2$s.",
   "tradeschool.taught.lesson_used": "%1$s has already learned all they can at this level.",
@@ -32,5 +32,5 @@
 
   "tradeschool.taught.title": "§aLesson learned",
   "tradeschool.taught.subtitle": "%s",
-  "tradeschool.refund": "Your §e%s§r was handed back — the villager couldn't learn from it after all. Sorry!"
+  "tradeschool.refund": "Your §e%s§r was handed back -- the villager couldn't learn from it after all. Sorry!"
 }

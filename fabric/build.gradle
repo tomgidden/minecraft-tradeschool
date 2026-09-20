@@ -15,7 +15,16 @@ sourceSets {
 
 loom {
     mods {
-        "tradeschool" { sourceSet sourceSets.main }
+        // The mod is two source sets: this project holds the loader entrypoint and
+        // tradeschool.mixins.json, while every class that config names lives in :common.
+        // Loom needs telling, or it treats mod "tradeschool" as this project alone and the
+        // dev run gets the mixin config without the mixins. Together with :common's jar
+        // being enabled (see common/build.gradle), this is what makes runGameTestServer
+        // work; either one alone is not enough.
+        "tradeschool" {
+            sourceSet sourceSets.main
+            sourceSet project(':common').sourceSets.main
+        }
         "tradeschool-gametest" { sourceSet sourceSets.gametest }
     }
 
@@ -36,7 +45,7 @@ dependencies {
     implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
     implementation project(':common')
 
-    // fabric-gametest-api-v1 is bundled inside fabric-api — no extra dependency needed
+    // fabric-gametest-api-v1 is bundled inside fabric-api -- no extra dependency needed
 }
 
 processResources {
@@ -44,7 +53,7 @@ processResources {
         version: project.version,
         mod_id: project.mod_id,
         mod_name: project.mod_name,
-        minecraft_version: project.minecraft_version,
+        minecraft_version_min: project.minecraft_version_min,
         fabric_loader_version: project.fabric_loader_version
     ]
     inputs.properties props

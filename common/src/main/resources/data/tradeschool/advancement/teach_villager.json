@@ -1,5 +1,5 @@
 {
-  "_comment": "Hardcoded English for server-side-only proof-of-concept only. title/description should be {\"translate\": \"advancements.tradeschool.teach_villager.title\"} etc., but that would require the mod client-side for i18n.",
+  "//": "Hardcoded English for server-side-only proof-of-concept only. title/description should be {\"translate\": \"advancements.tradeschool.teach_villager.title\"} etc., but that would require the mod client-side for i18n.",
   "parent": "tradeschool:root",
   "display": {
     "icon": {

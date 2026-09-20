@@ -17,6 +17,4 @@ dependencies {
     implementation "net.fabricmc:fabric-loader:${project.fabric_loader_version}"
 }
 
-// Nothing consumes this jar: the loader subprojects copy common's class output
-// straight into their own jars, so building it is pure waste.
-jar { enabled = false }
+jar { enabled = true }

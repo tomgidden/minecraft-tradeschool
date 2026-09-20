@@ -15,7 +15,7 @@ import java.util.Map;
 /// are derived.
 ///
 /// A setting has three things to say about itself: what it does, what it falls
-/// back to, and what it should actually be. Kept apart, they drift — a default
+/// back to, and what it should actually be. Kept apart, they drift -- a default
 /// changes in Java, the comment describing it stays in a resource, and the
 /// value written into the operator's file is a third statement in a third
 /// place, each free to disagree with the others.
@@ -67,26 +67,30 @@ import java.util.Map;
 /// It's also possible to use the spec to generate Java classes, but that's not
 /// currently implemented.  Still, it can be used as a canonical source of truth
 /// for an agent or developer to check manually-written classes.
-public final class ConfigSpec {
-
+public final class ConfigSpec
+{
   private static final String SUFFIX_SEPARATOR = "#";
 
   /// The suffixes that an entry can have.
   private static final String COMMENT = "#comment";
   private static final String DEFAULT = "#default";
   private static final String INITIAL = "#initial";
-  private static final String TYPE = "#type";
+  private static final String TYPE    = "#type";
 
   /// The spec itself, as a JSON object.
   private final JsonObject spec;
 
-  private ConfigSpec(JsonObject spec) { this.spec = spec; }
+  private ConfigSpec(JsonObject spec)
+  {
+    this.spec = spec;
+  }
 
-  private static String[] getPrefixAndSuffix(String key) {
+  private static String[] getPrefixAndSuffix(String key)
+  {
     int hash = key.lastIndexOf(SUFFIX_SEPARATOR);
 
     // No suffix, so return null
-    if (hash < 0)
+    if(hash < 0)
       return null;
 
     // Return a tuple of the prefix and suffix
@@ -97,23 +101,20 @@ public final class ConfigSpec {
   ///
   /// @param resource absolute resource path, e.g.
   /// `/data/mymod/config-spec.json`
-  /// @throws IllegalStateException if it is missing or malformed — both are
+  /// @throws IllegalStateException if it is missing or malformed -- both are
   ///     packaging faults in the mod itself rather than anything an operator
   ///     can cause or fix, so they fail loudly at startup instead of degrading
   ///     to empty defaults.
-  public static ConfigSpec load(Class<?> owner, String resource) {
-
+  public static ConfigSpec load(Class<?> owner, String resource)
+  {
     // Read the spec from the classpath
-    try (InputStream in = owner.getResourceAsStream(resource)) {
-
+    try(InputStream in = owner.getResourceAsStream(resource)) {
       // If it's missing, fail loudly
-      if (in == null)
-        throw new IllegalStateException("Config spec not found on classpath: " +
-                                        resource);
+      if(in == null)
+        throw new IllegalStateException("Config spec not found on classpath: " + resource);
 
       // Try to load the file as UTF-8...
-      try (Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
-
+      try(Reader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
         // TODO: replace this with a proper JSON5 parser, requiring a complete
         // rebuild of the config mechanism to be independent of Gson so as to
         // preserve the non-JSON-strict features like comments.
@@ -126,7 +127,7 @@ public final class ConfigSpec {
 
         // Parse the JSON
         JsonElement parsed = JsonParser.parseReader(json);
-        if (!parsed.isJsonObject())
+        if(!parsed.isJsonObject())
           throw new IllegalStateException(resource + (": root is not an "
                                                       + "object"));
 
@@ -136,15 +137,17 @@ public final class ConfigSpec {
     }
 
     // On file issues or bad JSON, fail loudly.
-    catch (IOException | JsonParseException e) {
-      throw new IllegalStateException("Could not read config spec " + resource,
-                                      e);
+    catch(IOException | JsonParseException e) {
+      throw new IllegalStateException("Could not read config spec " + resource, e);
     }
   }
 
   /// Wraps an already-parsed spec, for tests and for callers holding their own
   /// copy.
-  public static ConfigSpec of(JsonObject spec) { return new ConfigSpec(spec); }
+  public static ConfigSpec of(JsonObject spec)
+  {
+    return new ConfigSpec(spec);
+  }
 
   /// The intended balance, shaped like the config file.
   ///
@@ -152,7 +155,10 @@ public final class ConfigSpec {
   /// mention. Settings with no `#initial` are omitted rather than
   /// defaulted: absent means "the fallback is already right", and writing it
   /// out would clutter the file with lines stating what would happen anyway.
-  public JsonObject initialValues() { return collect(spec, INITIAL); }
+  public JsonObject initialValues()
+  {
+    return collect(spec, INITIAL);
+  }
 
   /// The benign fallbacks, shaped like the config file.
   ///
@@ -160,37 +166,36 @@ public final class ConfigSpec {
   /// this and compare it with a freshly constructed instance, and any
   /// disagreement is a field whose initialiser has drifted from what the spec
   /// promises.
-  public JsonObject defaultValues() { return collect(spec, DEFAULT); }
+  public JsonObject defaultValues()
+  {
+    return collect(spec, DEFAULT);
+  }
 
-  /// Every setting's explanation, keyed by dotted path —
+  /// Every setting's explanation, keyed by dotted path --
   /// `teaching.reputation.trading`.
   ///
   /// Flat because comments are looked up per setting, and a caller that has
   /// walked down to a leaf already knows the path it took.
-  public Map<String, String> comments() {
-
+  public Map<String, String> comments()
+  {
     Map<String, String> out = new java.util.LinkedHashMap<>();
     collectComments(spec, "", out);
     return out;
   }
 
-  private static void collectComments(JsonObject source, String prefix,
-                                      Map<String, String> out) {
-
+  private static void collectComments(JsonObject source, String prefix, Map<String, String> out)
+  {
     // For each entry in the source object
-    for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
-
+    for(Map.Entry<String, JsonElement> entry: source.entrySet()) {
       // Get the key and value
-      String key = entry.getKey();
+      String key        = entry.getKey();
       JsonElement value = entry.getValue();
 
       // Split the prefix and the trailing suffix (including the hash)
       String prefixAndSuffix[] = getPrefixAndSuffix(key);
-      if (prefixAndSuffix != null) {
-
+      if(prefixAndSuffix != null) {
         // If it's a #comment and the value is stringy...
-        if (prefixAndSuffix[1].equals(COMMENT) && value.isJsonPrimitive()) {
-
+        if(prefixAndSuffix[1].equals(COMMENT) && value.isJsonPrimitive()) {
           // Add it to the output object
           out.put(prefixAndSuffix[0], value.getAsString());
 
@@ -200,13 +205,12 @@ public final class ConfigSpec {
       }
 
       // If it's a note, ie. key.startsWith("//"), ignore it.
-      if (isNote(key))
+      if(isNote(key))
         continue;
 
       // So, it's a plain key; if the value's an object, then it's a group
       // to be recursed into.
-      if (value.isJsonObject()) {
-
+      if(value.isJsonObject()) {
         // So recurse into it.
         collectComments(value.getAsJsonObject(), prefix + key + ".", out);
       }
@@ -217,28 +221,25 @@ public final class ConfigSpec {
   ///
   /// Walks the spec keeping its nesting: a plain object is a group and
   /// recurses, a `name#suffix` key contributes `name` when the suffix matches.
-  /// Keys of neither kind — `//` notes, `_version` — are copied
+  /// Keys of neither kind -- `//` notes, `_version` -- are copied
   /// through, since a spec may legitimately state something the config file
   /// needs verbatim.
-  private static JsonObject collect(JsonObject source, String suffix) {
-
+  private static JsonObject collect(JsonObject source, String suffix)
+  {
     // Create a new object to hold the collected values
     JsonObject out = new JsonObject();
 
     // For each entry in the source object
-    for (Map.Entry<String, JsonElement> entry : source.entrySet()) {
-
+    for(Map.Entry<String, JsonElement> entry: source.entrySet()) {
       // Get the key and value
-      String key = entry.getKey();
+      String key        = entry.getKey();
       JsonElement value = entry.getValue();
 
       // Split the prefix and the trailing suffix (including the hash)
       String prefixAndSuffix[] = getPrefixAndSuffix(key);
-      if (prefixAndSuffix != null) {
-
+      if(prefixAndSuffix != null) {
         // If it's the suffix we're looking for...
-        if (prefixAndSuffix[1].equals(suffix)) {
-
+        if(prefixAndSuffix[1].equals(suffix)) {
           // Add the value to the output object using the key without the suffix
           out.add(prefixAndSuffix[0], value);
 
@@ -249,22 +250,21 @@ public final class ConfigSpec {
       }
 
       // If it's a note, ignore it
-      if (isNote(key)) {
+      if(isNote(key)) {
         continue;
       }
 
       // If not, then it's a plain key, to be included in the output object.
 
       // If it's a group, recurse
-      if (value.isJsonObject()) {
-
+      if(value.isJsonObject()) {
         // Recurse into the object for the same suffix
         JsonObject group = collect(value.getAsJsonObject(), suffix);
 
         // A group whose settings all lack this suffix contributes nothing;
         // emitting it anyway would write empty objects into the operator's
         // file.
-        if (!group.isEmpty())
+        if(!group.isEmpty())
           out.add(key, group);
       }
 
@@ -287,5 +287,8 @@ public final class ConfigSpec {
   ///
   /// As the keys must be unique, make sure the comment is unique within
   /// its object.
-  private static boolean isNote(String key) { return key.startsWith("//"); }
+  private static boolean isNote(String key)
+  {
+    return key.startsWith("//");
+  }
 }

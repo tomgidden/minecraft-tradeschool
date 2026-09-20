@@ -48,8 +48,8 @@ import org.jspecify.annotations.NonNull;
 ///
 /// A locale the mod does not ship simply reads as English, which is the
 /// ordinary outcome for any mod.
-public final class Messages {
-
+public final class Messages
+{
   /// The language every lookup ultimately falls back to.
   private static final String DEFAULT_LANGUAGE = "en_us";
 
@@ -61,7 +61,8 @@ public final class Messages {
   private java.util.function.Consumer<String> logger = m -> {};
 
   /// Routes load diagnostics to the consuming mod's logger.
-  public Messages withLogger(java.util.function.Consumer<String> logger) {
+  public Messages withLogger(java.util.function.Consumer<String> logger)
+  {
     this.logger = logger;
     return this;
   }
@@ -72,11 +73,15 @@ public final class Messages {
   /// @param modId names the namespace whose `assets/<modId>/lang/*.json` are
   /// read. Passed in rather than read from a Constants class so this stays
   /// mod-agnostic.
-  public Messages(String modId) { this.modId = modId; }
+  public Messages(String modId)
+  {
+    this.modId = modId;
+  }
 
   /// A component that translates for clients with the mod, and reads in the
   /// player's own language for those without.
-  public MutableComponent of(ServerPlayer player, String key) {
+  public MutableComponent of(ServerPlayer player, String key)
+  {
     return Component.translatableWithFallback(key, lookup(languageOf(player), key));
   }
 
@@ -85,8 +90,8 @@ public final class Messages {
   ///
   /// The fallback must be pre-formatted because the client only substitutes
   /// into a string it resolved itself; a fallback is rendered as-is.
-  public MutableComponent of(ServerPlayer player, @NonNull String key,
-                             Object... args) {
+  public MutableComponent of(ServerPlayer player, @NonNull String key, Object... args)
+  {
     String pattern = lookup(languageOf(player), key);
     return Component.translatableWithFallback(key, format(pattern, args), args);
   }
@@ -94,7 +99,8 @@ public final class Messages {
   /// As #of(ServerPlayer, String) but for a recipient whose language is
   /// unknown -- the console, a command block, or an offline player. Always
   /// English.
-  public MutableComponent ofDefault(@NonNull String key, Object... args) {
+  public MutableComponent ofDefault(@NonNull String key, Object... args)
+  {
     String pattern = lookup(DEFAULT_LANGUAGE, key);
     return Component.translatableWithFallback(key, format(pattern, args), args);
   }
@@ -116,10 +122,10 @@ public final class Messages {
   ///
   /// Doing this with a regexp-based `Matcher.appendReplacement/appendTail`
   /// approach would be neater but more overhead on a hot-ish path.
-  private static String format(String pattern, Object... args) {
-
+  private static String format(String pattern, Object... args)
+  {
     // If there are no args, then the pattern is the result.
-    if (args == null || args.length == 0)
+    if(args == null || args.length == 0)
       return pattern;
 
     // Get the pattern length
@@ -127,15 +133,14 @@ public final class Messages {
 
     // Otherwise, build a new string with the pattern's characters
     StringBuilder out = new StringBuilder(len + 16);
-    int nextArg = 0;
+    int nextArg       = 0;
 
     // For each character in the pattern...
-    for (int i = 0; i < len; i++) {
+    for(int i = 0; i < len; i++) {
       char c = pattern.charAt(i); // the current character
 
       // If it's definitely not a placeholder...
-      if (c != '%' || i + 1 >= len) {
-
+      if(c != '%' || i + 1 >= len) {
         // then append it to the output.
         out.append(c);
         continue;
@@ -144,13 +149,11 @@ public final class Messages {
       // Else, it might be a placeholder.
 
       // Assume c is '%', then if followed by 's'...
-      if (pattern.charAt(i + 1) == 's') {
-
+      if(pattern.charAt(i + 1) == 's') {
         // then we've got "%s", a sequential placeholder.
 
         // If we haven't consumed all the arguments sequentially...
-        if (nextArg < args.length) {
-
+        if(nextArg < args.length) {
           // then append the next argument in place of the placeholder
           out.append(stringify(args[nextArg++]));
           i++;
@@ -168,9 +171,9 @@ public final class Messages {
 
       // Starting at the next character, continue while we get digits, and use
       // them to build the index.  This is effectively a parseInt.
-      int j = i + 1;
+      int j     = i + 1;
       int index = 0;
-      while (j < len && Character.isDigit(pattern.charAt(j))) {
+      while(j < len && Character.isDigit(pattern.charAt(j))) {
         index = index * 10 + (pattern.charAt(j) - '0');
         j++;
       }
@@ -187,9 +190,7 @@ public final class Messages {
       //   * the next character is a `$`...
       //   * ...followed by `s`; and
       //   * the index is in the range of arguments...
-      if ( j + 1 < len && j > i + 1 && pattern.charAt(j) == '$' &&
-          pattern.charAt(j + 1) == 's' && index >= 1 && index <= args.length) {
-
+      if(j + 1 < len && j > i + 1 && pattern.charAt(j) == '$' && pattern.charAt(j + 1) == 's' && index >= 1 && index <= args.length) {
         // then append the argument to the output rather than the placeholder.
         out.append(stringify(args[index - 1]));
 
@@ -206,10 +207,10 @@ public final class Messages {
   }
 
   /// Renders an argument, resolving nested components to their plain text.
-  private static String stringify(Object arg) {
-
+  private static String stringify(Object arg)
+  {
     // If it's a component, then render it.
-    if (arg instanceof Component component)
+    if(arg instanceof Component component)
       return component.getString();
 
     // Otherwise, just stringify it.
@@ -217,11 +218,11 @@ public final class Messages {
   }
 
   /// The player's client language, normalised, or the default if unavailable.
-  private static String languageOf(ServerPlayer player) {
-
+  private static String languageOf(ServerPlayer player)
+  {
     // If we haven't got the player, eg. this is a server-side message, then
     // the default language is the best we can do.
-    if (player == null)
+    if(player == null)
       return DEFAULT_LANGUAGE;
 
     try {
@@ -229,7 +230,7 @@ public final class Messages {
       String language = player.clientInformation().language();
 
       // If it's blank, then the default language is the best we can do.
-      if (language == null || language.isBlank())
+      if(language == null || language.isBlank())
         return DEFAULT_LANGUAGE;
 
       // Trim and lowercase the language using the root locale's lowercasing
@@ -238,8 +239,7 @@ public final class Messages {
     }
 
     // If that failed, then the default language is the best we can do.
-    catch (Exception e) {
-
+    catch(Exception e) {
       // clientInformation is populated at login; be defensive rather than
       // let a message lookup break the trade.
       return DEFAULT_LANGUAGE;
@@ -311,14 +311,14 @@ public final class Messages {
   // Until then the chain stays: exact -> (scan) -> `xx_xx` -> en_us -> key,
   // and the scan's arbitrariness is bounded by it being a fallback that
   // only fires when the exact table lacks the key.
-  private String lookup(String language, String key) {
-
+  private String lookup(String language, String key)
+  {
     // Get the language table for the given language, and get the value
     // for the key.
     String value = tableFor(language).get(key);
 
     // If it's set, then we're done: return it.
-    if (value != null)
+    if(value != null)
       return value;
 
     // Otherwise, if the language has an underscore, then we're looking for a
@@ -327,20 +327,17 @@ public final class Messages {
 
     // Find the variant
     int underscore = language.indexOf('_');
-    if (underscore > 0) {
-
+    if(underscore > 0) {
       // Strip the variant, eg. `fr_ca` -> `fr`.
       String prefix = language.substring(0, underscore);
 
       // Look for tables with the prefix, eg. `fr_ca` -> `fr`.
-      for (String candidate : TABLES.keySet()) {
-
+      for(String candidate: TABLES.keySet()) {
         // If the candidate starts with the prefix, then it's a candidate.
-        if (candidate.startsWith(prefix + "_")) {
-
+        if(candidate.startsWith(prefix + "_")) {
           // Look for the key in the candidate, and return it if found.
           String regional = TABLES.get(candidate).get(key);
-          if (regional != null)
+          if(regional != null)
             return regional;
         }
       }
@@ -348,7 +345,7 @@ public final class Messages {
       // If we didn't find a regional variant, then try finding a value
       // the variant is the same as the language, eg. `fr_fr`.
       String guess = tableFor(prefix + "_" + prefix).get(key);
-      if (guess != null)
+      if(guess != null)
         return guess;
     }
 
@@ -362,8 +359,8 @@ public final class Messages {
   ///
   /// A missing file caches an empty table, so a server full of players with
   /// unshipped locales does not retry the classpath on every message.
-  private Map<String, String> tableFor(String language) {
-
+  private Map<String, String> tableFor(String language)
+  {
     // TODO: Consider using common/func/Memo or an extension of it, rather
     // than a roll-your-own memoization.  We may need TABLES.keySet() to
     // scan for languages, depending on the solution to the determinism
@@ -372,33 +369,31 @@ public final class Messages {
   }
 
   /// Attempt to load the given language's table.
-  private Map<String, String> load(String language) {
-
+  private Map<String, String> load(String language)
+  {
     // Build the file path
     String path = "/assets/" + modId + "/lang/" + language + ".json";
 
     // Try to load it.
     // XXX: Can we actually search for files somehow with a similar
     // mechanism to identify all available languages?
-    try (InputStream in = Messages.class.getResourceAsStream(path)) {
-
+    try(InputStream in = Messages.class.getResourceAsStream(path)) {
       // If it's missing, then return an empty table.
-      if (in == null)
+      if(in == null)
         return Collections.emptyMap();
 
       // Parse the file as JSON.
       JsonObject json = JsonParser
-              .parseReader(new InputStreamReader(in, StandardCharsets.UTF_8))
-              .getAsJsonObject();
+                            .parseReader(new InputStreamReader(in, StandardCharsets.UTF_8))
+                            .getAsJsonObject();
 
       // Build a table from the JSON.
       Map<String, String> table = new HashMap<>();
 
       // For each key/value pair in the JSON...
-      for (Map.Entry<String, JsonElement> entry : json.entrySet()) {
-
+      for(Map.Entry<String, JsonElement> entry: json.entrySet()) {
         // If the value is a primitive, then add it to the table.
-        if (entry.getValue().isJsonPrimitive())
+        if(entry.getValue().isJsonPrimitive())
           table.put(entry.getKey(), entry.getValue().getAsString());
       }
 
@@ -407,7 +402,7 @@ public final class Messages {
       return Map.copyOf(table); // XXX: do we need to copy?
     }
 
-    catch (Exception e) {
+    catch(Exception e) {
       logger.accept("could not read language " + language + ": " + e);
       return Collections.emptyMap();
     }
