@@ -181,6 +181,11 @@ works along similar lines but in a different way: **"Librarian's Balance"**
 - [[https://github.com/mistrk7/librarians-balance]]
 - [[https://modrinth.com/datapack/librarians-balance]]
 
+## Use of AI
+
+This project may have used AI for assistance coding, testing, and documentation,
+but only according to [AI_POLICY.md](https://github.com/tomgidden/minecraft-common/blob/main/AI_POLICY.md).
+
 ## License and stuff
 
 This mod is covered by the [MIT License](LICENSE.txt).

@@ -28,3 +28,4 @@ runs/
 tests/__pycache__
 tests/config.py
 */.eclipse
+/ROADMAP.md

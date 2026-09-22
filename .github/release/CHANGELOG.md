@@ -19,7 +19,9 @@ Proof-of-concept of an alternative Villager Trading mechanic using a teaching sy
   - Shipwreck supply and map chests;
   - More trial chamber chests;
   - All eleven village profession chests, which are now matched to the villager's profession.
-  - **Village houses are _mildly_ biome-specific.** The biome-specific enchantments from the _Villager Trade Rebalance_ experiment (which were exclusive in that experiment) should subtly influence the probabilities in the villages. For example, a Snow Village's enchanted books are now slightly more likely to be "Frost Walker" than "Fire Protection", and a Desert Village's are the opposite. We're only talking a couple of percent here, though.
+
+- **Village houses are _mildly_ biome-specific.**
+  The biome-specific enchantments from the _Villager Trade Rebalance_ experiment (which were exclusive in that experiment) should subtly influence the probabilities in the villages. For example, a Snow Village's enchanted books are now slightly more likely to be "Frost Walker" than "Fire Protection", and a Desert Village's are the opposite. We're only talking a couple of percent here, though.
 
 - Reliability.  There were a lot of bugs in the previous version where loot (for example) wasn't distributed as designed.
 
